@@ -27,7 +27,6 @@
     "react-hook-form": "^7.71.2",
     "react-leaflet": "^5.0.0",
     "superjson": "^2.2.6",
-    "twilio": "^5.13.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

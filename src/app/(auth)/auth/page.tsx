@@ -2,18 +2,21 @@
 
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { Phone, Mail, Leaf, ArrowRight, Loader2 } from "lucide-react";
+import { Phone, Mail, Leaf, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
-type Step = "choose" | "phone-input" | "verify-code" | "sms-opt-in";
+type Step = "choose" | "phone-input" | "verify-code";
 
 export default function AuthPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center p-12">
+          <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+        </div>
+      }
+    >
       <AuthPageInner />
     </Suspense>
   );
@@ -27,8 +30,6 @@ function AuthPageInner() {
   const [step, setStep] = useState<Step>("choose");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
-  const [smsOptIn, setSmsOptIn] = useState(true);
-  const [volunteerId, setVolunteerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -36,16 +37,16 @@ function AuthPageInner() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/sms/verify/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+      const supabase = createClient();
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        phone,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send code");
+      if (otpError) throw otpError;
       setStep("verify-code");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(
+        err instanceof Error ? err.message : "Failed to send verification code"
+      );
     } finally {
       setLoading(false);
     }
@@ -55,35 +56,20 @@ function AuthPageInner() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch("/api/sms/verify/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, code }),
+      const supabase = createClient();
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        phone,
+        token: code,
+        type: "sms",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Invalid code");
-      setVolunteerId(data.volunteerId);
-      setStep("sms-opt-in");
+      if (verifyError) throw verifyError;
+      router.push(callbackUrl);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(
+        err instanceof Error ? err.message : "Invalid or expired code"
+      );
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function handleOptInSubmit() {
-    setLoading(true);
-    try {
-      if (volunteerId) {
-        await fetch("/api/sms/opt-in", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ volunteerId, smsOptIn }),
-        });
-      }
-      router.push(callbackUrl);
-    } catch {
-      router.push(callbackUrl);
     }
   }
 
@@ -98,9 +84,7 @@ function AuthPageInner() {
           <Leaf className="w-8 h-8 text-white" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900">Lemontree</h1>
-        <p className="text-gray-500 mt-1">
-          Join the volunteer community
-        </p>
+        <p className="text-gray-500 mt-1">Join the volunteer community</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-xl shadow-black/5 border border-gray-100 p-8">
@@ -222,8 +206,8 @@ function AuthPageInner() {
                 <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  Verify
-                  <ArrowRight className="w-4 h-4" />
+                  <CheckCircle2 className="w-5 h-5" />
+                  Verify &amp; Sign In
                 </>
               )}
             </button>
@@ -236,55 +220,6 @@ function AuthPageInner() {
               className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
             >
               Use a different number
-            </button>
-          </div>
-        )}
-
-        {step === "sms-opt-in" && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 mb-3">
-                <Phone className="w-6 h-6 text-green-600" />
-              </div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                You&apos;re verified!
-              </h2>
-              <p className="text-sm text-gray-500 mt-1">
-                One last thing before you get started
-              </p>
-            </div>
-
-            <label className="flex items-start gap-3 p-4 rounded-xl border border-gray-200 hover:border-green-300 transition-colors cursor-pointer">
-              <input
-                type="checkbox"
-                checked={smsOptIn}
-                onChange={(e) => setSmsOptIn(e.target.checked)}
-                className="mt-0.5 h-5 w-5 rounded border-gray-300 text-green-600 focus:ring-green-500 accent-green-600"
-              />
-              <div>
-                <span className="text-sm font-medium text-gray-900">
-                  Receive SMS notifications
-                </span>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Get reminders about upcoming campaigns and team updates.
-                  You can opt out anytime by replying STOP.
-                </p>
-              </div>
-            </label>
-
-            <button
-              onClick={handleOptInSubmit}
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700 disabled:opacity-50 transition-all shadow-md shadow-green-600/20 cursor-pointer"
-            >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <>
-                  Get Started
-                  <ArrowRight className="w-4 h-4" />
-                </>
-              )}
             </button>
           </div>
         )}
