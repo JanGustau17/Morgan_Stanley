@@ -1,12 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
+import { ImagePlus, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { uploadFile } from '@/lib/supabase/upload';
 
 const campaignSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
@@ -30,6 +32,10 @@ const STEPS = ['Event Details', 'Target & Language', 'Location', 'Review'] as co
 export function CampaignForm() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const coverRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const {
@@ -65,13 +71,39 @@ export function CampaignForm() {
     setStep((s) => Math.max(s - 1, 0));
   }
 
+  function handleCoverSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+  }
+
+  function removeCover() {
+    setCoverFile(null);
+    setCoverPreview(null);
+    if (coverRef.current) coverRef.current.value = '';
+  }
+
   async function onSubmit(data: CampaignFormData) {
     setSubmitting(true);
     try {
+      let cover_image_url: string | null = null;
+
+      if (coverFile) {
+        setCoverUploading(true);
+        try {
+          cover_image_url = await uploadFile('campaign-images', 'covers', coverFile);
+        } catch {
+          // Continue without cover image
+        } finally {
+          setCoverUploading(false);
+        }
+      }
+
       const res = await fetch('/api/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, cover_image_url }),
       });
 
       if (!res.ok) {
@@ -144,6 +176,41 @@ export function CampaignForm() {
             error={errors.location_name?.message}
             {...register('location_name')}
           />
+
+          {/* Cover Image Upload */}
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Cover Image <span className="text-gray-400">(optional)</span>
+            </label>
+            {coverPreview ? (
+              <div className="relative">
+                <img
+                  src={coverPreview}
+                  alt="Cover preview"
+                  className="h-40 w-full rounded-lg object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={removeCover}
+                  className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-green-400 hover:bg-green-50">
+                <ImagePlus className="h-6 w-6 text-gray-400" />
+                <span className="text-sm text-gray-500">Click to upload a cover image</span>
+                <input
+                  ref={coverRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverSelect}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
         </div>
       )}
 
@@ -263,6 +330,12 @@ export function CampaignForm() {
               {values.lat}, {values.lng}
             </dd>
           </dl>
+          {coverPreview && (
+            <div className="mt-3">
+              <p className="mb-1.5 text-sm font-medium text-gray-500">Cover Image</p>
+              <img src={coverPreview} alt="Cover" className="h-32 w-full rounded-lg object-cover" />
+            </div>
+          )}
         </div>
       )}
 
@@ -282,7 +355,14 @@ export function CampaignForm() {
           </Button>
         ) : (
           <Button type="submit" loading={submitting}>
-            Create Campaign
+            {coverUploading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Uploading image...
+              </span>
+            ) : (
+              'Create Campaign'
+            )}
           </Button>
         )}
       </div>

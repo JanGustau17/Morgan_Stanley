@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { CalendarDays, MapPin, Users, ArrowRight } from 'lucide-react';
 import { auth } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -81,6 +82,20 @@ export default async function EventDetailPage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
+      {/* Cover Image */}
+      {campaign.cover_image_url && (
+        <div className="relative h-48 w-full overflow-hidden rounded-xl sm:h-64">
+          <Image
+            src={campaign.cover_image_url}
+            alt={campaign.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 896px"
+            priority
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="space-y-4">
         <div className="flex flex-wrap items-start justify-between gap-4">

@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { MapPin, Calendar, Users } from 'lucide-react';
+import Image from 'next/image';
+import { MapPin, Calendar, Users, Megaphone } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { formatDate } from '@/lib/utils';
@@ -21,15 +22,37 @@ function statusVariant(status: string): 'active' | 'upcoming' | 'completed' {
 export function CampaignCard({ campaign, volunteerCount }: CampaignCardProps) {
   return (
     <Link href={`/events/${campaign.id}`} className="block">
-      <Card hover className="h-full">
+      <Card hover className="h-full overflow-hidden">
+        {campaign.cover_image_url ? (
+          <div className="relative h-36 w-full">
+            <Image
+              src={campaign.cover_image_url}
+              alt={campaign.name}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 33vw"
+            />
+            <div className="absolute right-2 top-2">
+              <Badge variant={statusVariant(campaign.status)} size="sm">
+                {campaign.status}
+              </Badge>
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-24 items-center justify-center bg-gradient-to-br from-green-50 to-green-100">
+            <Megaphone className="h-8 w-8 text-green-300" />
+          </div>
+        )}
         <CardContent className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">
             <h3 className="font-semibold text-lg text-gray-900 line-clamp-1">
               {campaign.name}
             </h3>
-            <Badge variant={statusVariant(campaign.status)} size="sm">
-              {campaign.status}
-            </Badge>
+            {!campaign.cover_image_url && (
+              <Badge variant={statusVariant(campaign.status)} size="sm">
+                {campaign.status}
+              </Badge>
+            )}
           </div>
 
           {campaign.neighborhood && (
