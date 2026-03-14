@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 
-const client = require('twilio')(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
+function getTwilioClient() {
+  return require('twilio')(
+    process.env.TWILIO_ACCOUNT_SID,
+    process.env.TWILIO_AUTH_TOKEN
+  );
+}
 
 export async function POST(request: Request) {
   try {
@@ -38,6 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const client = getTwilioClient();
     const result = await client.messages.create({
       body: `${message}\n\nReply STOP to opt out.`,
       from: process.env.TWILIO_PHONE_NUMBER!,
@@ -46,8 +49,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, sid: result.sid });
   } catch (err: unknown) {
-    const message =
+    const msg =
       err instanceof Error ? err.message : 'Failed to send SMS';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

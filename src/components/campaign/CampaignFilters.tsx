@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { CampaignCard } from '@/components/campaign/CampaignCard';
 import { haversineDistance } from '@/lib/utils';
 import type { CampaignWithVolunteers } from '@/lib/types';
 
@@ -11,13 +12,11 @@ type FilterType = 'all' | 'active' | 'upcoming' | 'nearby';
 interface CampaignFiltersProps {
   campaigns: CampaignWithVolunteers[];
   volunteerCounts: Record<string, number>;
-  children: (filtered: CampaignWithVolunteers[], counts: Record<string, number>) => React.ReactNode;
 }
 
 export function CampaignFilters({
   campaigns,
   volunteerCounts,
-  children,
 }: CampaignFiltersProps) {
   const [filter, setFilter] = useState<FilterType>('all');
   const [newestFirst, setNewestFirst] = useState(true);
@@ -118,7 +117,15 @@ export function CampaignFilters({
         </div>
       </div>
 
-      {children(filtered, volunteerCounts)}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filtered.map((campaign) => (
+          <CampaignCard
+            key={campaign.id}
+            campaign={campaign}
+            volunteerCount={volunteerCounts[campaign.id] ?? 0}
+          />
+        ))}
+      </div>
     </div>
   );
 }

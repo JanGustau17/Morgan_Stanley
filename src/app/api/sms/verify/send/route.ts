@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 
-const client = require('twilio')(
-  process.env.TWILIO_ACCOUNT_SID,
-  process.env.TWILIO_AUTH_TOKEN
-);
+function getTwilioClient() {
+  return require('twilio')(
+    process.env.TWILIO_ACCOUNT_SID,
+    process.env.TWILIO_AUTH_TOKEN
+  );
+}
 
 export async function POST(request: Request) {
   try {
@@ -16,6 +18,7 @@ export async function POST(request: Request) {
       );
     }
 
+    const client = getTwilioClient();
     await client.verify.v2
       .services(process.env.TWILIO_VERIFY_SERVICE_SID!)
       .verifications.create({ to: phone, channel: 'sms' });

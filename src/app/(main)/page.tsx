@@ -1,6 +1,5 @@
 import { Leaf } from 'lucide-react';
 import { createServiceClient } from '@/lib/supabase/server';
-import { CampaignCard } from '@/components/campaign/CampaignCard';
 import { CampaignFilters } from '@/components/campaign/CampaignFilters';
 import type { CampaignWithVolunteers } from '@/lib/types';
 
@@ -58,19 +57,7 @@ export default async function HomePage() {
         <CampaignFilters
           campaigns={typedCampaigns}
           volunteerCounts={volunteerCounts}
-        >
-          {(filtered, counts) => (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filtered.map((campaign) => (
-                <CampaignCard
-                  key={campaign.id}
-                  campaign={campaign}
-                  volunteerCount={counts[campaign.id] ?? 0}
-                />
-              ))}
-            </div>
-          )}
-        </CampaignFilters>
+        />
       )}
     </>
   );
