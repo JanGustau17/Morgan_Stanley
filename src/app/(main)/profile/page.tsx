@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
-import { Avatar } from '@/components/ui/Avatar';
 import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { AvatarUpload } from '@/components/profile/AvatarUpload';
 import { Badge } from '@/components/ui/Badge';
 import { LevelBadge } from '@/components/gamification/LevelBadge';
 import { XPBar } from '@/components/gamification/XPBar';
@@ -84,7 +84,11 @@ export default async function ProfilePage() {
       {/* Profile Header */}
       <Card>
         <CardContent className="flex flex-col sm:flex-row items-center gap-6 py-8">
-          <Avatar src={volunteer.avatar_url} name={volunteer.name} size="lg" className="!h-20 !w-20 !text-2xl" />
+          <AvatarUpload
+            currentUrl={volunteer.avatar_url}
+            name={volunteer.name}
+            volunteerId={volunteer.id}
+          />
           <div className="text-center sm:text-left">
             <h1 className="text-2xl font-bold text-gray-900">
               {volunteer.name ?? 'Volunteer'}
