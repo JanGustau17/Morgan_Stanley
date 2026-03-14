@@ -1,42 +1,26 @@
 'use client';
 
-import { useRef, useState } from 'react';
-import { Marker, Popup, useMapEvents } from 'react-leaflet';
+import { useRef, useState, useEffect } from 'react';
+import { Marker, Popup } from 'react-map-gl/mapbox';
 import { Camera, MapPin } from 'lucide-react';
 import exifr from 'exifr';
 
 interface PinDropperProps {
   campaignId: string;
   onPinAdded: (pin: { lat: number; lng: number }) => void;
+  clickedPoint: { lat: number; lng: number } | null;
 }
 
-interface PendingPin {
-  lat: number;
-  lng: number;
-  confirmed: boolean;
-}
-
-function ClickHandler({
-  onMapClick,
-}: {
-  onMapClick: (lat: number, lng: number) => void;
-}) {
-  useMapEvents({
-    click(e) {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-}
-
-export default function PinDropper({ campaignId, onPinAdded }: PinDropperProps) {
-  const [pendingPin, setPendingPin] = useState<PendingPin | null>(null);
+export default function PinDropper({ campaignId, onPinAdded, clickedPoint }: PinDropperProps) {
+  const [pendingPin, setPendingPin] = useState<{ lat: number; lng: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  function handleMapClick(lat: number, lng: number) {
-    setPendingPin({ lat, lng, confirmed: false });
-  }
+  useEffect(() => {
+    if (clickedPoint) {
+      setPendingPin(clickedPoint);
+    }
+  }, [clickedPoint]);
 
   async function handleConfirm() {
     if (!pendingPin) return;
@@ -72,7 +56,7 @@ export default function PinDropper({ campaignId, onPinAdded }: PinDropperProps) 
     try {
       const gps = await exifr.gps(file);
       if (gps) {
-        setPendingPin({ lat: gps.latitude, lng: gps.longitude, confirmed: false });
+        setPendingPin({ lat: gps.latitude, lng: gps.longitude });
       }
     } catch {
       // No GPS data in photo
@@ -83,11 +67,16 @@ export default function PinDropper({ campaignId, onPinAdded }: PinDropperProps) 
 
   return (
     <>
-      <ClickHandler onMapClick={handleMapClick} />
-
       {pendingPin && (
-        <Marker position={[pendingPin.lat, pendingPin.lng]}>
-          <Popup>
+        <>
+          <Marker longitude={pendingPin.lng} latitude={pendingPin.lat} anchor="bottom" />
+          <Popup
+            longitude={pendingPin.lng}
+            latitude={pendingPin.lat}
+            anchor="top"
+            onClose={handleCancel}
+            closeOnClick={false}
+          >
             <div className="flex flex-col gap-2 p-1">
               <p className="text-sm font-medium">Drop a flyer pin here?</p>
               <p className="text-xs text-gray-500">
@@ -99,7 +88,7 @@ export default function PinDropper({ campaignId, onPinAdded }: PinDropperProps) 
                   disabled={saving}
                   className="rounded bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
                 >
-                  {saving ? 'Saving…' : 'Confirm'}
+                  {saving ? 'Saving\u2026' : 'Confirm'}
                 </button>
                 <button
                   onClick={handleCancel}
@@ -110,10 +99,10 @@ export default function PinDropper({ campaignId, onPinAdded }: PinDropperProps) 
               </div>
             </div>
           </Popup>
-        </Marker>
+        </>
       )}
 
-      <div className="absolute bottom-4 left-4 z-[1000] flex gap-2">
+      <div className="absolute bottom-4 left-4 z-10 flex gap-2">
         <div className="rounded-lg bg-white px-3 py-2 text-xs font-medium text-gray-600 shadow-lg">
           <MapPin className="mr-1 inline h-3.5 w-3.5" />
           Click map to drop pin

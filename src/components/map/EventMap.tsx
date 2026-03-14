@@ -1,18 +1,10 @@
 'use client';
 
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import { useState } from 'react';
+import Map, { Marker, Popup } from 'react-map-gl/mapbox';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
 interface EventMapProps {
   lat: number;
@@ -21,24 +13,38 @@ interface EventMapProps {
 }
 
 export default function EventMap({ lat, lng, locationName }: EventMapProps) {
+  const [showPopup, setShowPopup] = useState(true);
+
   return (
     <div className="h-[400px] overflow-hidden rounded-xl border border-gray-200">
-      <MapContainer
-        center={[lat, lng]}
-        zoom={15}
-        scrollWheelZoom={false}
-        className="h-full w-full"
+      <Map
+        initialViewState={{ longitude: lng, latitude: lat, zoom: 15 }}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapboxAccessToken={MAPBOX_TOKEN}
+        scrollZoom={false}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        <Marker
+          longitude={lng}
+          latitude={lat}
+          anchor="bottom"
+          onClick={(e) => {
+            e.originalEvent.stopPropagation();
+            setShowPopup(true);
+          }}
         />
-        <Marker position={[lat, lng]}>
-          <Popup>
+        {showPopup && (
+          <Popup
+            longitude={lng}
+            latitude={lat}
+            anchor="top"
+            onClose={() => setShowPopup(false)}
+            closeOnClick={false}
+          >
             <span className="font-medium">{locationName}</span>
           </Popup>
-        </Marker>
-      </MapContainer>
+        )}
+      </Map>
     </div>
   );
 }

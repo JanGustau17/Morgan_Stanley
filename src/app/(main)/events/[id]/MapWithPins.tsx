@@ -1,18 +1,13 @@
 'use client';
 
-import { MapContainer, TileLayer } from 'react-leaflet';
-import L from 'leaflet';
+import { useState, useCallback } from 'react';
+import Map from 'react-map-gl/mapbox';
 import FlyerHeatmap from '@/components/map/FlyerHeatmap';
 import PinDropper from '@/components/map/PinDropper';
-import 'leaflet/dist/leaflet.css';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import type { MapLayerMouseEvent } from 'mapbox-gl';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN!;
 
 interface MapWithPinsProps {
   campaignId: string;
@@ -22,21 +17,32 @@ interface MapWithPinsProps {
 }
 
 export default function MapWithPins({ campaignId, pins, center, onPinAdded }: MapWithPinsProps) {
+  const [clickedPoint, setClickedPoint] = useState<{ lat: number; lng: number } | null>(null);
+
+  const handleClick = useCallback((e: MapLayerMouseEvent) => {
+    setClickedPoint({ lat: e.lngLat.lat, lng: e.lngLat.lng });
+  }, []);
+
   return (
     <div className="relative h-[400px] overflow-hidden rounded-xl border border-gray-200">
-      <MapContainer
-        center={[center.lat, center.lng]}
-        zoom={14}
-        scrollWheelZoom
-        className="h-full w-full"
+      <Map
+        initialViewState={{
+          longitude: center.lng,
+          latitude: center.lat,
+          zoom: 14,
+        }}
+        style={{ width: '100%', height: '100%' }}
+        mapStyle="mapbox://styles/mapbox/streets-v12"
+        mapboxAccessToken={MAPBOX_TOKEN}
+        onClick={handleClick}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
         <FlyerHeatmap pins={pins} />
-        <PinDropper campaignId={campaignId} onPinAdded={onPinAdded} />
-      </MapContainer>
+        <PinDropper
+          campaignId={campaignId}
+          onPinAdded={onPinAdded}
+          clickedPoint={clickedPoint}
+        />
+      </Map>
     </div>
   );
 }

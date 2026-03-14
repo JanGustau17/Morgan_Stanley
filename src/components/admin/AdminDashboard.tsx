@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
-import { MapContainer, TileLayer } from 'react-leaflet';
 import {
   BarChart3,
   QrCode,
@@ -17,9 +16,9 @@ import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Input } from '@/components/ui/Input';
 import { format } from 'date-fns';
-import 'leaflet/dist/leaflet.css';
+import 'mapbox-gl/dist/mapbox-gl.css';
 
-const FlyerHeatmap = dynamic(() => import('@/components/map/FlyerHeatmap'), {
+const AdminHeatmap = dynamic(() => import('./AdminHeatmap'), {
   ssr: false,
 });
 
@@ -210,18 +209,7 @@ export function AdminDashboard({
           </CardHeader>
           <CardContent className="p-0">
             <div className="h-[400px] overflow-hidden rounded-b-xl">
-              <MapContainer
-                center={[mapCenter.lat, mapCenter.lng]}
-                zoom={11}
-                className="h-full w-full"
-                scrollWheelZoom={false}
-              >
-                <TileLayer
-                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                />
-                <FlyerHeatmap pins={conversions} />
-              </MapContainer>
+              <AdminHeatmap center={mapCenter} conversions={conversions} />
             </div>
           </CardContent>
         </Card>
