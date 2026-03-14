@@ -28,6 +28,7 @@ export async function POST(request: Request) {
       language,
       target_group,
       volunteers_needed,
+      cover_image_url,
     } = body;
 
     if (!name || !neighborhood || !campaign_date) {
@@ -55,6 +56,7 @@ export async function POST(request: Request) {
         volunteers_needed: volunteers_needed ?? 5,
         ref_tag: refTag,
         status: 'upcoming',
+        cover_image_url: cover_image_url ?? null,
       })
       .select()
       .single();
