@@ -4,20 +4,14 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { UserPlus, CheckCircle2, CalendarDays, MapPin, Users } from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
 import { formatDate } from '@/lib/utils';
 
 const EventMap = dynamic(() => import('@/components/map/EventMap'), {
   ssr: false,
-  loading: () => (
-    <div className="h-full w-full animate-pulse bg-gray-200" />
-  ),
+  loading: () => <div className="h-full w-full animate-pulse bg-gray-200" />,
 });
 
-const MapWithPins = dynamic(
-  () => import('./MapWithPins'),
-  { ssr: false }
-);
+const MapWithPins = dynamic(() => import('./MapWithPins'), { ssr: false });
 
 interface EventPageClientProps {
   campaignId: string;
@@ -34,6 +28,12 @@ interface EventPageClientProps {
   language: string;
 }
 
+const statusBadgeClass: Record<string, string> = {
+  active:    'bg-amber-100 text-amber-700',
+  upcoming:  'bg-gray-100 text-gray-600',
+  completed: 'bg-gray-100 text-gray-400',
+};
+
 export function EventPageClient({
   campaignId,
   alreadyJoined,
@@ -49,31 +49,19 @@ export function EventPageClient({
   language,
 }: EventPageClientProps) {
   const router = useRouter();
-  const [joined, setJoined] = useState(alreadyJoined);
+  const [joined, setJoined]   = useState(alreadyJoined);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [pins, setPins] = useState(initialPins);
-
-  const statusVariant =
-    status === 'active' ? 'active' as const
-    : status === 'completed' ? 'completed' as const
-    : 'upcoming' as const;
+  const [error, setError]     = useState<string | null>(null);
+  const [pins, setPins]       = useState(initialPins);
 
   async function handleJoin() {
-    if (!isSignedIn) {
-      router.push('/auth');
-      return;
-    }
+    if (!isSignedIn) { router.push('/auth'); return; }
     setLoading(true);
     setError(null);
     try {
       const res = await fetch(`/api/campaigns/${campaignId}/join`, { method: 'POST' });
       if (res.status === 409) { setJoined(true); return; }
-      if (!res.ok) {
-        const body = await res.json();
-        setError(body.error ?? 'Failed to join');
-        return;
-      }
+      if (!res.ok) { setError((await res.json()).error ?? 'Failed to join'); return; }
       setJoined(true);
       router.refresh();
     } catch {
@@ -83,14 +71,10 @@ export function EventPageClient({
     }
   }
 
-  function handlePinAdded(pin: { lat: number; lng: number }) {
-    setPins((prev) => [...prev, pin]);
-  }
-
   return (
     <>
-      {/* Full-bleed map hero */}
-      <div className="relative h-[520px] w-full overflow-hidden">
+      {/* Full-bleed map — no overlay */}
+      <div className="h-[400px] w-full overflow-hidden">
         {mapCenter ? (
           <EventMap
             lat={mapCenter.lat}
@@ -99,80 +83,84 @@ export function EventPageClient({
             containerClassName="h-full w-full"
           />
         ) : (
-          <div className="h-full w-full bg-violet-50" />
+          <div className="h-full w-full bg-gray-100" />
         )}
+      </div>
 
-        {/* Overlay card */}
-        <div className="absolute bottom-0 left-0 right-0 sm:bottom-6 sm:left-6 sm:right-auto sm:max-w-sm rounded-none sm:rounded-2xl bg-white/95 backdrop-blur-sm p-6 shadow-xl">
-          <div className="flex items-center gap-2 mb-3">
-            <Badge variant={statusVariant} size="sm">{status}</Badge>
-            {language !== 'en' && (
-              <Badge variant="level" size="sm" className="bg-violet-600">
-                {language.toUpperCase()}
-              </Badge>
-            )}
+      {/* Event header — below the map */}
+      <div className="mx-auto max-w-3xl px-4 py-8">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${statusBadgeClass[status] ?? statusBadgeClass.upcoming}`}>
+            {status}
+          </span>
+          {language !== 'en' && (
+            <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+              {language.toUpperCase()}
+            </span>
+          )}
+        </div>
+
+        <h1 className="mb-4 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          {campaignName}
+        </h1>
+
+        <div className="mb-6 flex flex-wrap gap-4 text-sm text-gray-500">
+          {campaignDate && (
+            <span className="flex items-center gap-1.5">
+              <CalendarDays className="h-4 w-4 shrink-0 text-indigo-400" />
+              {formatDate(campaignDate)}
+            </span>
+          )}
+          {locationName && (
+            <span className="flex items-center gap-1.5">
+              <MapPin className="h-4 w-4 shrink-0 text-indigo-400" />
+              {locationName}
+            </span>
+          )}
+          <span className="flex items-center gap-1.5">
+            <Users className="h-4 w-4 shrink-0 text-indigo-400" />
+            {volunteersCount} / {volunteersNeeded} volunteers
+          </span>
+        </div>
+
+        {joined ? (
+          <div className="inline-flex items-center gap-2 rounded-xl bg-green-50 px-5 py-3 text-sm font-semibold text-green-700">
+            <CheckCircle2 className="h-5 w-5" />
+            You&apos;ve joined this event!
           </div>
-
-          <h1 className="text-2xl font-bold text-gray-900 mb-3 leading-tight">
-            {campaignName}
-          </h1>
-
-          <div className="flex flex-col gap-1.5 text-sm text-gray-600 mb-5">
-            {campaignDate && (
-              <div className="flex items-center gap-1.5">
-                <CalendarDays className="h-4 w-4 shrink-0 text-violet-600" />
-                {formatDate(campaignDate)}
-              </div>
-            )}
-            {locationName && (
-              <div className="flex items-center gap-1.5">
-                <MapPin className="h-4 w-4 shrink-0 text-violet-600" />
-                {locationName}
-              </div>
-            )}
-            <div className="flex items-center gap-1.5">
-              <Users className="h-4 w-4 shrink-0 text-violet-600" />
-              {volunteersCount} / {volunteersNeeded} volunteers
-            </div>
-          </div>
-
-          {joined ? (
-            <div className="inline-flex items-center gap-2 rounded-lg bg-violet-50 px-4 py-2.5 text-sm font-medium text-violet-700">
-              <CheckCircle2 className="h-5 w-5" />
-              You&apos;ve joined this event!
-            </div>
-          ) : (
+        ) : (
+          <div className="flex flex-col gap-2">
             <button
               onClick={handleJoin}
               disabled={loading}
-              className="inline-flex items-center justify-center rounded-lg bg-violet-700 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-900 px-6 py-3.5 text-base font-semibold text-white transition-colors hover:bg-indigo-950 disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
             >
-              {loading ? (
-                <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              ) : (
-                <UserPlus className="mr-2 h-4 w-4" />
-              )}
+              {loading
+                ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                : <UserPlus className="h-5 w-5" />}
               Join This Event
             </button>
-          )}
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-        </div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+          </div>
+        )}
       </div>
 
-      {/* Flyer Coverage Map (only for joined volunteers) */}
+      {/* Flyer coverage map (joined volunteers only) */}
       {joined && (
-        <section className="space-y-3 px-4 py-6 sm:px-6">
-          <h2 className="text-lg font-semibold text-gray-900">Flyer Coverage</h2>
-          <p className="text-sm text-gray-500">
-            Click the map to drop a pin where you&apos;ve placed flyers, or upload a geotagged photo.
-          </p>
-          <MapWithPins
-            campaignId={campaignId}
-            pins={pins}
-            center={mapCenter ?? { lat: 40.7128, lng: -74.006 }}
-            onPinAdded={handlePinAdded}
-          />
-        </section>
+        <div className="mx-auto max-w-3xl px-4 pb-2">
+          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+            <h2 className="mb-1 text-lg font-semibold text-gray-900">Flyer Coverage</h2>
+            <p className="mb-4 text-sm text-gray-500">
+              Click the map to drop a pin where you&apos;ve placed flyers.
+            </p>
+            <MapWithPins
+              campaignId={campaignId}
+              pins={pins}
+              center={mapCenter ?? { lat: 40.7128, lng: -74.006 }}
+              onPinAdded={(pin) => setPins((p) => [...p, pin])}
+            />
+          </div>
+        </div>
       )}
     </>
   );

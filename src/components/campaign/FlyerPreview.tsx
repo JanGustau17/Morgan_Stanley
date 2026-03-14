@@ -32,7 +32,7 @@ export function FlyerPreview({ lat, lng, locationName, lang, campaignId }: Flyer
       <a
         href={flyerUrl}
         download={`flyer-${campaignId}.pdf`}
-        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-violet-700 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-800"
+        className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-indigo-950"
       >
         <Download className="h-4 w-4" />
         Download Flyer
