@@ -24,6 +24,8 @@ export async function POST(req: Request) {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!userRes.ok) {
+      const errBody = await userRes.text().catch(() => "unknown");
+      console.error(`phone-session: /auth/v1/user returned ${userRes.status}: ${errBody}`);
       return NextResponse.json({ error: "Invalid or expired session" }, { status: 401 });
     }
     const supabaseUser = await userRes.json();

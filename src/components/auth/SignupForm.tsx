@@ -79,12 +79,20 @@ export default function SignupForm() {
         type: "sms",
       });
       if (verifyError) throw verifyError;
-      // Use session from verifyOtp response; getSession() can be empty due to async persistence
-      const accessToken =
-        verifyData?.session?.access_token ??
-        (await supabase.auth.getSession()).data.session?.access_token;
+      // verifyOtp may not persist the session synchronously — try multiple sources
+      let accessToken = verifyData?.session?.access_token;
       if (!accessToken) {
-        setError("Session missing. Please try again.");
+        // Force a session refresh so the token is written to storage
+        const { data: refreshData } = await supabase.auth.refreshSession();
+        accessToken = refreshData?.session?.access_token;
+      }
+      if (!accessToken) {
+        // Last resort fallback
+        const { data: sessionData } = await supabase.auth.getSession();
+        accessToken = sessionData?.session?.access_token;
+      }
+      if (!accessToken) {
+        setError("Session missing. Please request a new code.");
         setLoading(false);
         return;
       }
