@@ -1,15 +1,13 @@
 import NextAuth from 'next-auth';
-import Google from 'next-auth/providers/google';
 import { createServiceClient } from './supabase/server';
+import authConfig from '@/auth.config';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-  ],
+  ...authConfig,
+  trustHost: true,
   callbacks: {
+    // Upsert volunteer by email so the same Google account always maps to the same row.
+    // On sign-out and sign-back-in, the same volunteerId is restored in the new session.
     async signIn({ user }) {
       const supabase = createServiceClient();
       const { error } = await supabase.from('volunteers').upsert(
@@ -22,18 +20,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       );
       return !error;
     },
-    async session({ session }) {
-      if (session.user?.email) {
+    // On each sign-in (including after sign-out), load volunteer id and role so session is consistent.
+    async jwt({ token, user }) {
+      if (user?.email) {
         const supabase = createServiceClient();
         const { data } = await supabase
           .from('volunteers')
           .select('id, role')
-          .eq('email', session.user.email)
+          .eq('email', user.email)
           .single();
         if (data) {
-          (session.user as unknown as Record<string, unknown>).volunteerId = data.id;
-          (session.user as unknown as Record<string, unknown>).role = data.role;
+          token.volunteerId = data.id;
+          token.role = data.role;
         }
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.volunteerId = token.volunteerId as string | undefined;
+        session.user.role = token.role as string | undefined;
       }
       return session;
     },

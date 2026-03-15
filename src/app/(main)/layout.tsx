@@ -2,8 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { UserNav } from "@/components/auth/UserNav";
 
 function Navbar() {
+  const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
@@ -104,19 +107,25 @@ function Navbar() {
         </Link>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="/auth"
-            className="hidden sm:block text-sm font-semibold text-[#101726] px-4 py-1.5 rounded-md border-2 border-[#101726] hover:bg-black/5 transition-colors"
-          >
-            LOG IN
-          </Link>
-          <Link
-            href="/auth"
-            className="text-sm font-bold text-white px-4 py-1.5 rounded-md transition-colors hover:opacity-90"
-            style={{ background: "#5C3D8F" }}
-          >
-            GET STARTED
-          </Link>
+          {session?.user ? (
+            <UserNav name={session.user.name} image={session.user.image} />
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="hidden sm:block text-sm font-semibold text-[#101726] px-4 py-1.5 rounded-md border-2 border-[#101726] hover:bg-black/5 transition-colors"
+              >
+                LOG IN
+              </Link>
+              <Link
+                href="/auth"
+                className="text-sm font-bold text-white px-4 py-1.5 rounded-md transition-colors hover:opacity-90"
+                style={{ background: "#5C3D8F" }}
+              >
+                GET STARTED
+              </Link>
+            </>
+          )}
         </div>
       </div>
 
@@ -140,19 +149,25 @@ function Navbar() {
             </Link>
           ))}
           <div className="flex gap-2 mt-3 pt-3 border-t border-black/10">
-            <Link
-              href="/auth"
-              className="flex-1 text-center text-sm font-bold text-[#101726] py-2 rounded-md border-2 border-[#101726]"
-            >
-              LOG IN
-            </Link>
-            <Link
-              href="/auth"
-              className="flex-1 text-center text-sm font-bold text-white py-2 rounded-md"
-              style={{ background: "#5C3D8F" }}
-            >
-              GET STARTED
-            </Link>
+            {session?.user ? (
+              <UserNav name={session.user.name} image={session.user.image} />
+            ) : (
+              <>
+                <Link
+                  href="/auth"
+                  className="flex-1 text-center text-sm font-bold text-[#101726] py-2 rounded-md border-2 border-[#101726]"
+                >
+                  LOG IN
+                </Link>
+                <Link
+                  href="/auth"
+                  className="flex-1 text-center text-sm font-bold text-white py-2 rounded-md"
+                  style={{ background: "#5C3D8F" }}
+                >
+                  GET STARTED
+                </Link>
+              </>
+            )}
           </div>
         </div>
       )}
