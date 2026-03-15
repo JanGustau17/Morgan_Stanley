@@ -1,9 +1,9 @@
 import { createHmac, timingSafeEqual } from "crypto";
 
-const AUTH_SECRET = process.env.AUTH_SECRET;
+const AUTH_SECRET = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
 
 export function signPhoneToken(payload: { volunteerId: string; exp: number }): string {
-  if (!AUTH_SECRET) throw new Error("AUTH_SECRET not set");
+  if (!AUTH_SECRET) throw new Error("AUTH_SECRET or NEXTAUTH_SECRET not set");
   const data = JSON.stringify(payload);
   const sig = createHmac("sha256", AUTH_SECRET).update(data).digest("base64url");
   return `${Buffer.from(data).toString("base64url")}.${sig}`;
