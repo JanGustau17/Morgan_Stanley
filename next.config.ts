@@ -10,6 +10,19 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Access-Control-Allow-Headers",
+            value: "rsc, next-url, next-router-prefetch, next-router-state-tree",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
