@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { UserNav } from "@/components/auth/UserNav";
 
@@ -27,6 +28,7 @@ function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#ffcc10] shadow-sm">
       <div className="max-w-7xl mx-auto px-4 h-[60px] flex items-center justify-between gap-3">
 
+        {/* LEFT: nav links */}
         <div className="flex items-center gap-1">
           <button
             className="md:hidden p-2 -ml-1 rounded-lg text-[#101726]"
@@ -84,35 +86,32 @@ function Navbar() {
           </div>
         </div>
 
-        <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5 shrink-0">
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: "#E8522A" }}
-          >
-            <svg viewBox="0 0 100 100" width="22" height="22" fill="none">
-              <ellipse cx="50" cy="54" rx="28" ry="24" fill="#ffcc10" />
-              <ellipse cx="76" cy="50" rx="7" ry="5" fill="#ffcc10" transform="rotate(-20 76 50)" />
-              <ellipse cx="24" cy="58" rx="7" ry="5" fill="#ffcc10" transform="rotate(20 24 58)" />
-              <ellipse cx="50" cy="28" rx="10" ry="7" fill="#008A81" transform="rotate(-15 50 28)" />
-              <circle cx="46" cy="56" r="2" fill="#E8522A" opacity="0.5" />
-              <circle cx="53" cy="60" r="2" fill="#E8522A" opacity="0.5" />
-            </svg>
-          </div>
-          <img
-            src="https://www.foodhelpline.org/_next/static/media/wordmark.483cff36.svg"
-            alt="lemontree"
-            className="h-6 w-auto"
-            style={{ filter: "brightness(0)" }}
+        {/* CENTER: logo — using local SVG files from /public */}
+        <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 shrink-0">
+          <Image
+            src="/lemontree_logo.svg"
+            alt="Lemontree logo"
+            width={36}
+            height={36}
+            priority
+          />
+          <Image
+            src="/lemontree_word.svg"
+            alt="Lemontree"
+            width={110}
+            height={24}
+            priority
           />
         </Link>
 
+        {/* RIGHT: auth */}
         <div className="flex items-center gap-2">
           {session?.user ? (
             <UserNav name={session.user.name} image={session.user.image} />
           ) : (
             <>
               <Link
-                href="/login"
+                href="/auth"
                 className="hidden sm:block text-sm font-semibold text-[#101726] px-4 py-1.5 rounded-md border-2 border-[#101726] hover:bg-black/5 transition-colors"
               >
                 LOG IN
@@ -129,6 +128,7 @@ function Navbar() {
         </div>
       </div>
 
+      {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden bg-[#ffcc10] border-t border-black/10 px-4 py-3 flex flex-col gap-0.5">
           {[
@@ -179,7 +179,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   return (
     <>
       <Navbar />
-      <main>{children}</main>
+      {/* pt-[60px] offsets the fixed navbar so content is never hidden behind it */}
+      <main className="pt-[60px]">{children}</main>
     </>
   );
 }

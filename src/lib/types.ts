@@ -14,6 +14,9 @@ export interface Volunteer {
   last_active: string | null;
   role: string;
   created_at: string;
+  banner_id: string | null;
+  banner_image: string | null;
+  greeting_id: string | null;
 }
 
 export interface Campaign {
