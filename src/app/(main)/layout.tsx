@@ -1,166 +1,46 @@
-"use client";
+import Link from 'next/link';
+import Image from 'next/image';
+import { auth } from '@/lib/auth';
+import { Avatar } from '@/components/ui/Avatar';
 
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
-
-// ─── Brand tokens (exact from foodhelpline.org) ───────────────────────────────
-// Navbar bg:  #ffcc10  (yellow — always, matches real site)
-// Purple CTA: #5C3D8F  (their "Get Started" / primary action purple)
-// Teal:       #008A81  (secondary accent, tags, info)
-// Background: #fff6E0  (warm cream page bg)
-// Text:       #101726
-// Logo:       orange circle icon + black wordmark (side by side)
-
-interface Event {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  location: string;
-  distance?: number;
-  volunteers: number;
-  active: boolean;
-  tags: string[];
-}
-
-const MOCK_EVENTS: Event[] = [
-  {
-    id: "1",
-    title: "Brooklyn Food Pantry Flyer Blitz",
-    description:
-      "Help spread the word about free food resources in Bushwick and Bed-Stuy. We'll post flyers at laundromats, community boards, and bodegas.",
-    date: "2025-03-20T10:00:00",
-    location: "Bushwick, Brooklyn, NY",
-    distance: 1.2,
-    volunteers: 8,
-    active: true,
-    tags: ["Flyers", "Outreach"],
-  },
-  {
-    id: "2",
-    title: "Bronx Community Awareness Drive",
-    description:
-      "Canvass the South Bronx and connect neighbors with local soup kitchens and SNAP enrollment resources.",
-    date: "2025-03-22T09:00:00",
-    location: "South Bronx, NY",
-    distance: 4.8,
-    volunteers: 15,
-    active: true,
-    tags: ["Canvassing", "SNAP"],
-  },
-  {
-    id: "3",
-    title: "Harlem Food Resource Mapping",
-    description:
-      "Photograph and map flyer locations in Harlem to track outreach efforts on our live heatmap.",
-    date: "2025-04-05T11:00:00",
-    location: "Harlem, Manhattan, NY",
-    distance: 6.1,
-    volunteers: 4,
-    active: false,
-    tags: ["Mapping", "Photography"],
-  },
-  {
-    id: "4",
-    title: "Queens SNAP Enrollment Day",
-    description:
-      "Partner with local social workers to help residents of Jackson Heights enroll in SNAP benefits.",
-    date: "2025-04-10T09:30:00",
-    location: "Jackson Heights, Queens, NY",
-    distance: 8.3,
-    volunteers: 10,
-    active: false,
-    tags: ["SNAP", "Enrollment"],
-  },
-  {
-    id: "5",
-    title: "Staten Island Pantry Connect",
-    description:
-      "Drive awareness for 3 under-resourced food pantries in Staten Island's north shore neighborhoods.",
-    date: "2025-04-18T10:00:00",
-    location: "St. George, Staten Island, NY",
-    distance: 14.5,
-    volunteers: 3,
-    active: false,
-    tags: ["Flyers", "Food Pantry"],
-  },
-  {
-    id: "6",
-    title: "Lower East Side Soup Kitchen Blitz",
-    description:
-      "Spread awareness for two soup kitchens in the LES that are struggling to reach the neighbors who need them most.",
-    date: "2025-03-28T09:00:00",
-    location: "Lower East Side, Manhattan, NY",
-    distance: 2.9,
-    volunteers: 11,
-    active: true,
-    tags: ["Soup Kitchen", "Outreach"],
-  },
-];
-
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-// ─── Navbar ───────────────────────────────────────────────────────────────────
-// Matches foodhelpline.org exactly:
-//   - Always yellow (#ffcc10) background
-//   - Orange circle lemon icon + black wordmark side by side (centered)
-//   - Hamburger menu icon on left (desktop: nav links left)
-//   - Log In = outlined border button | Sign Up = purple filled button
-function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [communityOpen, setCommunityOpen] = useState(false);
-  const dropRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (dropRef.current && !dropRef.current.contains(e.target as Node))
-        setCommunityOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const linkCls =
-    "text-sm font-semibold text-[#101726] px-3 py-2 rounded-lg hover:bg-black/8 transition-colors";
+export default async function MainLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  let user: { name?: string | null; image?: string | null } | undefined;
+  try {
+    const session = await auth();
+    user = session?.user ?? undefined;
+  } catch {
+    user = undefined;
+  }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#ffcc10] shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 h-[60px] flex items-center justify-between gap-3">
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--background)' }}>
+      <nav
+        className="sticky top-0 z-50 border-b"
+        style={{ background: 'var(--secondary)', borderColor: 'var(--border)' }}
+      >
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center gap-2">
+              <Image src="/lemontree_logo.svg" alt="Lemontree logo" width={32} height={32} />
+              <Image src="/lemontree_word.svg" alt="Lemontree" width={100} height={22} />
+            </Link>
 
-        {/* LEFT: hamburger (mobile) + nav links (desktop) */}
-        <div className="flex items-center gap-1">
-          {/* Mobile hamburger */}
-          <button
-            className="md:hidden p-2 -ml-1 rounded-lg text-[#101726]"
-            onClick={() => setMobileOpen((v) => !v)}
-            aria-label="Menu"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24">
-              {mobileOpen ? (
-                <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              ) : (
-                <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              )}
-            </svg>
-          </button>
-
-          {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-0.5">
-            <Link href="/" className={linkCls}>Home</Link>
-
-            {/* Community dropdown */}
-            <div className="relative" ref={dropRef}>
-              <button
-                onClick={() => setCommunityOpen((v) => !v)}
-                className={`${linkCls} flex items-center gap-1`}
+            <div className="hidden sm:flex items-center gap-6">
+              <Link
+                href="/"
+                className="text-sm font-medium transition-colors"
+                style={{ color: 'var(--muted)' }}
+              >
+                Home
+              </Link>
+              <Link
+                href="/leaderboard"
+                className="text-sm font-medium transition-colors"
+                style={{ color: 'var(--muted)' }}
               >
                 Community
                 <svg
@@ -266,8 +146,9 @@ function Navbar() {
           ))}
           <div className="flex gap-2 mt-3 pt-3 border-t border-black/10">
             <Link
-              href="/(auth)/login"
-              className="flex-1 text-center text-sm font-bold text-[#101726] py-2 rounded-md border-2 border-[#101726]"
+              href="/events/new"
+              className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors"
+              style={{ background: 'var(--primary)' }}
             >
               LOG IN
             </Link>
@@ -322,52 +203,15 @@ function HeroSection() {
             find free food.
           </h1>
 
-          <p className="text-[#101726]/65 text-lg leading-relaxed mb-8 max-w-md">
-            Join Lemontree&apos;s volunteer network. Post flyers, run outreach events,
-            and connect 1 in 8 Americans with the food resources they deserve — right
-            in your neighborhood.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link
-              href="/(auth)/signup"
-              className="text-center px-7 py-3.5 rounded-full text-white font-semibold text-base transition-colors hover:opacity-90"
-            style={{ background: "#5C3D8F" }}
-            >
-              Get Started — It&apos;s Free
-            </Link>
-            <a
-              href="#events"
-              className="text-center px-7 py-3.5 rounded-full border-2 border-[#101726]/15 text-[#101726] font-medium text-base hover:border-[#008A81] hover:text-[#008A81] transition-colors"
-            >
-              Browse Events
-            </a>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-10 flex flex-wrap gap-8">
-            {[
-              { value: "900k+", label: "Families helped" },
-              { value: "30+", label: "Corporate partners" },
-              { value: "12,988", label: "Helped yesterday" },
-            ].map((s) => (
-              <div key={s.label}>
-                <div className="text-2xl font-bold text-[#008A81]">{s.value}</div>
-                <div className="text-xs text-[#101726]/50 mt-0.5 leading-snug">
-                  {s.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right — preview cards */}
-        <div className="hidden md:flex flex-col gap-4">
-          <div className="bg-white rounded-2xl p-5 shadow border border-[#e8e0cc]">
-            <div className="flex items-center gap-3 mb-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                style={{ background: "#008A8114" }}
+            {user ? (
+              <Link href="/profile">
+                <Avatar src={user.image} name={user.name} size="sm" />
+              </Link>
+            ) : (
+              <Link
+                href="/auth"
+                className="text-sm font-medium transition-colors"
+                style={{ color: 'var(--muted)' }}
               >
                 📍
               </div>
@@ -464,24 +308,17 @@ function MissionSection() {
     },
   ];
 
-  return (
-    <section id="mission" className="py-24 bg-white">
-      <div className="max-w-6xl mx-auto px-6">
-        <div className="text-center mb-14">
-          <div className="inline-block bg-[#ffcc10] text-[#101726] text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
-            Our Mission
+      <footer
+        className="border-t"
+        style={{ background: 'var(--background-paper)', borderColor: 'var(--border)' }}
+      >
+        <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2">
+            <Image src="/lemontree_logo.svg" alt="Lemontree" width={20} height={20} />
+            <Image src="/lemontree_word.svg" alt="Lemontree" width={80} height={18} />
           </div>
-          <h2
-            className="text-4xl md:text-5xl font-bold text-[#101726] mb-4"
-            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-          >
-            Making ends meet is hard.
-            <br />
-            <span className="text-[#008A81]">Getting help shouldn&apos;t be.</span>
-          </h2>
-          <p className="text-[#101726]/60 text-lg leading-relaxed max-w-2xl mx-auto">
-            Lemontree connects neighbors in need with free food resources and powers
-            the volunteer network that gets the word out.
+          <p className="text-xs" style={{ color: 'var(--muted)' }}>
+            Connecting food-insecure families to free food resources through community volunteering.
           </p>
         </div>
 
