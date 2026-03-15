@@ -1,94 +1,170 @@
-import Link from 'next/link';
-import { auth } from '@/lib/auth';
-import { Avatar } from '@/components/ui/Avatar';
+"use client";
 
-export default async function MainLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  let user: { name?: string | null; image?: string | null } | undefined;
-  try {
-    const session = await auth();
-    user = session?.user ?? undefined;
-  } catch {
-    user = undefined;
-  }
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+
+function Navbar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [communityOpen, setCommunityOpen] = useState(false);
+  const dropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node))
+        setCommunityOpen(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const linkCls =
+    "text-sm font-semibold text-[#101726] px-3 py-2 rounded-lg hover:bg-black/8 transition-colors";
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <nav className="sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-1.5">
-              <span className="text-2xl" role="img" aria-label="Lemon">
-                🍋
-              </span>
-              <span className="text-xl font-bold text-green-600">
-                Lemontree
-              </span>
-            </Link>
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#ffcc10] shadow-sm">
+      <div className="max-w-7xl mx-auto px-4 h-[60px] flex items-center justify-between gap-3">
 
-            <div className="hidden sm:flex items-center gap-6">
-              <Link
-                href="/"
-                className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors"
+        <div className="flex items-center gap-1">
+          <button
+            className="md:hidden p-2 -ml-1 rounded-lg text-[#101726]"
+            onClick={() => setMobileOpen((v) => !v)}
+            aria-label="Menu"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24">
+              {mobileOpen ? (
+                <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              ) : (
+                <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              )}
+            </svg>
+          </button>
+
+          <div className="hidden md:flex items-center gap-0.5">
+            <Link href="/" className={linkCls}>Home</Link>
+
+            <div className="relative" ref={dropRef}>
+              <button
+                onClick={() => setCommunityOpen((v) => !v)}
+                className={`${linkCls} flex items-center gap-1`}
               >
-                Home
-              </Link>
-              <Link
-                href="/leaderboard"
-                className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors"
-              >
-                Leaderboard
-              </Link>
+                Community
+                <svg
+                  className={`w-3.5 h-3.5 transition-transform ${communityOpen ? "rotate-180" : ""}`}
+                  fill="none" viewBox="0 0 16 16"
+                >
+                  <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {communityOpen && (
+                <div className="absolute top-full left-0 mt-1.5 w-48 bg-white rounded-xl border border-[#e8e0cc] shadow-xl py-1.5 z-50">
+                  {[
+                    { href: "/events", icon: "📅", label: "Events" },
+                    { href: "/leaderboard", icon: "🏆", label: "Leaderboard" },
+                    { href: "/profile", icon: "👤", label: "My Profile" },
+                  ].map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setCommunityOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#101726] hover:bg-[#fff6E0] hover:text-[#5C3D8F] transition-colors"
+                    >
+                      <span className="text-base leading-none">{item.icon}</span>
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
 
-          <div className="flex items-center gap-3">
+            <Link href="/events/new" className={linkCls}>Create Event</Link>
+            <Link href="/admin" className={linkCls}>Admin</Link>
+          </div>
+        </div>
+
+        <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5 shrink-0">
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: "#E8522A" }}
+          >
+            <svg viewBox="0 0 100 100" width="22" height="22" fill="none">
+              <ellipse cx="50" cy="54" rx="28" ry="24" fill="#ffcc10" />
+              <ellipse cx="76" cy="50" rx="7" ry="5" fill="#ffcc10" transform="rotate(-20 76 50)" />
+              <ellipse cx="24" cy="58" rx="7" ry="5" fill="#ffcc10" transform="rotate(20 24 58)" />
+              <ellipse cx="50" cy="28" rx="10" ry="7" fill="#008A81" transform="rotate(-15 50 28)" />
+              <circle cx="46" cy="56" r="2" fill="#E8522A" opacity="0.5" />
+              <circle cx="53" cy="60" r="2" fill="#E8522A" opacity="0.5" />
+            </svg>
+          </div>
+          <img
+            src="https://www.foodhelpline.org/_next/static/media/wordmark.483cff36.svg"
+            alt="lemontree"
+            className="h-6 w-auto"
+            style={{ filter: "brightness(0)" }}
+          />
+        </Link>
+
+        <div className="flex items-center gap-2">
+          <Link
+            href="/auth"
+            className="hidden sm:block text-sm font-semibold text-[#101726] px-4 py-1.5 rounded-md border-2 border-[#101726] hover:bg-black/5 transition-colors"
+          >
+            LOG IN
+          </Link>
+          <Link
+            href="/auth"
+            className="text-sm font-bold text-white px-4 py-1.5 rounded-md transition-colors hover:opacity-90"
+            style={{ background: "#5C3D8F" }}
+          >
+            GET STARTED
+          </Link>
+        </div>
+      </div>
+
+      {mobileOpen && (
+        <div className="md:hidden bg-[#ffcc10] border-t border-black/10 px-4 py-3 flex flex-col gap-0.5">
+          {[
+            { href: "/", label: "Home" },
+            { href: "/events", label: "Events" },
+            { href: "/events/new", label: "Create Event" },
+            { href: "/leaderboard", label: "Leaderboard" },
+            { href: "/profile", label: "My Profile" },
+            { href: "/admin", label: "Admin" },
+          ].map((item) => (
             <Link
-              href="/events/new"
-              className="inline-flex items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileOpen(false)}
+              className="text-sm font-semibold text-[#101726] py-2.5 px-3 rounded-lg hover:bg-black/8 transition-colors"
             >
-              Create Event
+              {item.label}
             </Link>
-
-            {user ? (
-              <Link href="/profile">
-                <Avatar
-                  src={user.image}
-                  name={user.name}
-                  size="sm"
-                />
-              </Link>
-            ) : (
-              <Link
-                href="/auth"
-                className="text-sm font-medium text-gray-600 hover:text-green-600 transition-colors"
-              >
-                Sign In
-              </Link>
-            )}
+          ))}
+          <div className="flex gap-2 mt-3 pt-3 border-t border-black/10">
+            <Link
+              href="/auth"
+              className="flex-1 text-center text-sm font-bold text-[#101726] py-2 rounded-md border-2 border-[#101726]"
+            >
+              LOG IN
+            </Link>
+            <Link
+              href="/auth"
+              className="flex-1 text-center text-sm font-bold text-white py-2 rounded-md"
+              style={{ background: "#5C3D8F" }}
+            >
+              GET STARTED
+            </Link>
           </div>
         </div>
-      </nav>
+      )}
+    </nav>
+  );
+}
 
-      <main className="flex-1">
-        <div className="max-w-7xl mx-auto px-4 py-8">{children}</div>
-      </main>
-
-      <footer className="border-t border-gray-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4 py-6 text-center">
-          <p className="text-sm text-gray-500">
-            Powered by{' '}
-            <span className="font-semibold text-green-600">Lemontree</span>
-          </p>
-          <p className="mt-1 text-xs text-gray-400">
-            Connecting food-insecure families to free food resources through
-            community volunteering.
-          </p>
-        </div>
-      </footer>
-    </div>
+export default function MainLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <Navbar />
+      <main>{children}</main>
+    </>
   );
 }

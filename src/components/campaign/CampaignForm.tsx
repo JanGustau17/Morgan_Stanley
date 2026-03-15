@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
+import { ImagePlus, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
+import { uploadFile } from '@/lib/supabase/upload';
 
-// ─── Schema ──────────────────────────────────────────────────
 const campaignSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
   neighborhood: z.string().min(1, 'Neighborhood is required'),
@@ -31,7 +32,6 @@ const campaignSchema = z.object({
 
 type CampaignFormData = z.infer<typeof campaignSchema>;
 
-// ─── Constants ───────────────────────────────────────────────
 const STEPS = ['Details', 'Audience', 'Location', 'Review'] as const;
 
 const TARGET_GROUPS = [
@@ -50,7 +50,6 @@ const LANGUAGES = [
   { id: 'ht' as const, label: 'Haitian Creole' },
 ];
 
-// ─── QR Placeholder (deterministic SVG) ──────────────────────
 function QRPlaceholder({ value, size = 120 }: { value: string; size?: number }) {
   const hash = (s: string) => {
     let h = 0;
@@ -61,7 +60,6 @@ function QRPlaceholder({ value, size = 120 }: { value: string; size?: number }) 
   const cell = size / grid;
   const h = hash(value || 'lemontree');
   const cells: React.ReactElement[] = [];
-
   for (let r = 0; r < grid; r++) {
     for (let c = 0; c < grid; c++) {
       const isCorner = (r < 7 && c < 7) || (r < 7 && c >= grid - 7) || (r >= grid - 7 && c < 7);
@@ -75,7 +73,6 @@ function QRPlaceholder({ value, size = 120 }: { value: string; size?: number }) 
         (isCorner && r >= 2 && r <= 4 && c >= grid - 5 && c <= grid - 3) ||
         (isCorner && r >= grid - 5 && r <= grid - 3 && c >= 2 && c <= 4);
       const pseudoRand = ((h * (r + 1) * (c + 1) + r * 7 + c * 13) % 100) > 45;
-
       if (isBorder || isInner || (!isCorner && pseudoRand)) {
         cells.push(
           <rect key={`${r}-${c}`} x={c * cell} y={r * cell} width={cell} height={cell} rx={0.8} fill="#16a34a" />
@@ -83,7 +80,6 @@ function QRPlaceholder({ value, size = 120 }: { value: string; size?: number }) 
       }
     }
   }
-
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="rounded-lg">
       <rect width={size} height={size} fill="white" rx={8} />
@@ -92,11 +88,14 @@ function QRPlaceholder({ value, size = 120 }: { value: string; size?: number }) 
   );
 }
 
-// ─── Main Form ───────────────────────────────────────────────
 export function CampaignForm() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const coverRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const {
@@ -138,13 +137,37 @@ export function CampaignForm() {
     setStep((s) => Math.max(s - 1, 0));
   }
 
+  function handleCoverSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
+  }
+
+  function removeCover() {
+    setCoverFile(null);
+    setCoverPreview(null);
+    if (coverRef.current) coverRef.current.value = '';
+  }
+
   async function onSubmit(data: CampaignFormData) {
     setSubmitting(true);
     try {
+      let cover_image_url: string | null = null;
+      if (coverFile) {
+        setCoverUploading(true);
+        try {
+          cover_image_url = await uploadFile('campaign-images', 'covers', coverFile);
+        } catch {
+          // Continue without cover image
+        } finally {
+          setCoverUploading(false);
+        }
+      }
       const res = await fetch('/api/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, cover_image_url }),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -169,7 +192,6 @@ export function CampaignForm() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      {/* ── Step Indicator ── */}
       <div className="flex items-center justify-between">
         {STEPS.map((label, i) => (
           <div key={label} className="flex items-center flex-1 last:flex-none">
@@ -187,26 +209,19 @@ export function CampaignForm() {
               >
                 {i < step ? '✓' : i + 1}
               </button>
-              <span
-                className={`text-xs font-medium ${
-                  i <= step ? 'text-green-700' : 'text-gray-400'
-                }`}
-              >
+              <span className={`text-xs font-medium ${i <= step ? 'text-green-700' : 'text-gray-400'}`}>
                 {label}
               </span>
             </div>
             {i < STEPS.length - 1 && (
               <div
-                className={`h-0.5 flex-1 mx-3 mt-[-1.25rem] rounded ${
-                  i < step ? 'bg-green-600' : 'bg-gray-200'
-                } transition-colors`}
+                className={`h-0.5 flex-1 mx-3 mt-[-1.25rem] rounded ${i < step ? 'bg-green-600' : 'bg-gray-200'} transition-colors`}
               />
             )}
           </div>
         ))}
       </div>
 
-      {/* ── Step 1: Event Details ── */}
       {step === 0 && (
         <div className="space-y-4">
           <Input
@@ -216,17 +231,8 @@ export function CampaignForm() {
             {...register('name')}
           />
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Date *"
-              type="date"
-              error={errors.campaign_date?.message}
-              {...register('campaign_date')}
-            />
-            <Input
-              label="Time"
-              type="time"
-              {...register('campaign_time')}
-            />
+            <Input label="Date *" type="date" error={errors.campaign_date?.message} {...register('campaign_date')} />
+            <Input label="Time" type="time" {...register('campaign_time')} />
           </div>
           <Input
             label="Neighborhood *"
@@ -241,26 +247,43 @@ export function CampaignForm() {
             {...register('location_name')}
           />
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Description
-            </label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Description</label>
             <textarea
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 min-h-[80px] resize-y"
               placeholder="Tell volunteers what to expect..."
               {...register('description')}
             />
           </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">
+              Cover Image <span className="text-gray-400">(optional)</span>
+            </label>
+            {coverPreview ? (
+              <div className="relative">
+                <img src={coverPreview} alt="Cover preview" className="h-40 w-full rounded-lg object-cover" />
+                <button
+                  type="button"
+                  onClick={removeCover}
+                  className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-green-400 hover:bg-green-50">
+                <ImagePlus className="h-6 w-6 text-gray-400" />
+                <span className="text-sm text-gray-500">Click to upload a cover image</span>
+                <input ref={coverRef} type="file" accept="image/*" onChange={handleCoverSelect} className="hidden" />
+              </label>
+            )}
+          </div>
         </div>
       )}
 
-      {/* ── Step 2: Audience & Language ── */}
       {step === 1 && (
         <div className="space-y-6">
-          {/* Target Group Cards */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Target Audience
-            </label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Target Audience</label>
             <div className="grid grid-cols-2 gap-3">
               {TARGET_GROUPS.map((g) => {
                 const selected = watchedTargetGroup === g.id;
@@ -270,9 +293,7 @@ export function CampaignForm() {
                     type="button"
                     onClick={() => setValue('target_group', g.id)}
                     className={`flex flex-col items-start rounded-xl border-2 p-4 text-left transition-all ${
-                      selected
-                        ? 'border-green-600 bg-green-50 shadow-sm'
-                        : 'border-gray-200 bg-white hover:border-gray-300'
+                      selected ? 'border-green-600 bg-green-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
                     <span className="text-2xl mb-1">{g.icon}</span>
@@ -282,16 +303,10 @@ export function CampaignForm() {
                 );
               })}
             </div>
-            {errors.target_group && (
-              <p className="mt-1.5 text-sm text-red-600">{errors.target_group.message}</p>
-            )}
+            {errors.target_group && <p className="mt-1.5 text-sm text-red-600">{errors.target_group.message}</p>}
           </div>
-
-          {/* Language Chips */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Flyer Language
-            </label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Flyer Language</label>
             <div className="flex flex-wrap gap-2">
               {LANGUAGES.map((lang) => {
                 const selected = watchedLanguage === lang.id;
@@ -301,9 +316,7 @@ export function CampaignForm() {
                     type="button"
                     onClick={() => setValue('language', lang.id)}
                     className={`rounded-full px-4 py-2 text-sm font-semibold border transition-all ${
-                      selected
-                        ? 'bg-green-600 text-white border-green-600'
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
+                      selected ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
                     }`}
                   >
                     {lang.label}
@@ -311,11 +324,8 @@ export function CampaignForm() {
                 );
               })}
             </div>
-            {errors.language && (
-              <p className="mt-1.5 text-sm text-red-600">{errors.language.message}</p>
-            )}
+            {errors.language && <p className="mt-1.5 text-sm text-red-600">{errors.language.message}</p>}
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Volunteers Needed"
@@ -325,72 +335,31 @@ export function CampaignForm() {
               error={errors.volunteers_needed?.message}
               {...register('volunteers_needed')}
             />
-            <Input
-              label="Flyer Goal"
-              type="number"
-              min={1}
-              placeholder="e.g. 200"
-              {...register('flyer_goal')}
-            />
+            <Input label="Flyer Goal" type="number" min={1} placeholder="e.g. 200" {...register('flyer_goal')} />
           </div>
         </div>
       )}
 
-      {/* ── Step 3: Location ── */}
       {step === 2 && (
         <div className="space-y-4">
-          {/* Map Placeholder */}
           <div className="h-52 rounded-xl overflow-hidden bg-gradient-to-br from-green-100 via-green-50 to-emerald-100 border-2 border-dashed border-green-300 flex flex-col items-center justify-center gap-2">
             <span className="text-4xl">🗺️</span>
-            <span className="text-sm font-semibold text-green-700">
-              Map preview loads here
-            </span>
-            <span className="text-xs text-green-600/60">
-              Click to drop a pin or enter coordinates below
-            </span>
+            <span className="text-sm font-semibold text-green-700">Map preview loads here</span>
+            <span className="text-xs text-green-600/60">Click to drop a pin or enter coordinates below</span>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
-            <Input
-              label="Latitude *"
-              type="number"
-              step="any"
-              placeholder="e.g. 40.7945"
-              error={errors.lat?.message}
-              {...register('lat')}
-            />
-            <Input
-              label="Longitude *"
-              type="number"
-              step="any"
-              placeholder="e.g. -73.9380"
-              error={errors.lng?.message}
-              {...register('lng')}
-            />
+            <Input label="Latitude *" type="number" step="any" placeholder="e.g. 40.7945" error={errors.lat?.message} {...register('lat')} />
+            <Input label="Longitude *" type="number" step="any" placeholder="e.g. -73.9380" error={errors.lng?.message} {...register('lng')} />
           </div>
-
-          <Input
-            label="Meeting Point"
-            placeholder="e.g. Corner of 181st & Broadway"
-            {...register('meeting_point')}
-          />
-
-          <Input
-            label="Additional Notes"
-            placeholder="e.g. Parking available on 182nd St"
-            {...register('location_notes')}
-          />
+          <Input label="Meeting Point" placeholder="e.g. Corner of 181st & Broadway" {...register('meeting_point')} />
+          <Input label="Additional Notes" placeholder="e.g. Parking available on 182nd St" {...register('location_notes')} />
         </div>
       )}
 
-      {/* ── Step 4: Review ── */}
       {step === 3 && (
         <div className="space-y-6">
-          {/* Summary Card */}
           <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-green-50 to-amber-50 p-5">
-            <h3 className="text-lg font-bold text-gray-900 mb-3">
-              {values.name || 'Untitled Campaign'}
-            </h3>
+            <h3 className="text-lg font-bold text-gray-900 mb-3">{values.name || 'Untitled Campaign'}</h3>
             <div className="grid gap-2 text-sm">
               {[
                 ['📅', values.campaign_date ? `${values.campaign_date}${values.campaign_time ? ` at ${values.campaign_time}` : ''}` : 'No date set'],
@@ -408,43 +377,34 @@ export function CampaignForm() {
               ))}
             </div>
           </div>
-
-          {/* Shareable Link */}
+          {coverPreview && (
+            <div>
+              <p className="mb-1.5 text-sm font-medium text-gray-500">Cover Image</p>
+              <img src={coverPreview} alt="Cover" className="h-32 w-full rounded-lg object-cover" />
+            </div>
+          )}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Shareable Event Link
-            </label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">Shareable Event Link</label>
             <div className="flex gap-2 items-center">
-              <div className="flex-1 rounded-lg bg-gray-100 px-3 py-2.5 font-mono text-sm text-green-700 font-semibold truncate">
-                {shareUrl}
-              </div>
+              <div className="flex-1 rounded-lg bg-gray-100 px-3 py-2.5 font-mono text-sm text-green-700 font-semibold truncate">{shareUrl}</div>
               <Button type="button" variant={copied ? 'primary' : 'outline'} size="md" onClick={handleCopy}>
                 {copied ? '✓ Copied' : 'Copy'}
               </Button>
             </div>
           </div>
-
-          {/* QR Code */}
           <div className="flex gap-5 items-start">
             <div className="rounded-xl border border-gray-200 bg-white p-3">
               <QRPlaceholder value={shareUrl} size={100} />
             </div>
             <div className="flex-1">
               <p className="text-sm text-gray-600 leading-relaxed mb-3">
-                Volunteers can scan this QR code to RSVP instantly. 
-                Every scan is tracked for your impact metrics.
+                Volunteers can scan this QR code to RSVP instantly. Every scan is tracked for your impact metrics.
               </p>
-              <Button type="button" variant="outline" size="sm">
-                Download QR Code
-              </Button>
+              <Button type="button" variant="outline" size="sm">Download QR Code</Button>
             </div>
           </div>
-
-          {/* Social Share */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-gray-700">
-              Share on Social Media
-            </label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Share on Social Media</label>
             <div className="flex flex-wrap gap-2">
               {[
                 { name: 'WhatsApp', emoji: '💬', bg: 'bg-green-50 text-green-700 border-green-200' },
@@ -465,22 +425,24 @@ export function CampaignForm() {
         </div>
       )}
 
-      {/* ── Navigation ── */}
       <div className="flex justify-between pt-2">
         {step > 0 ? (
-          <Button type="button" variant="outline" onClick={goBack}>
-            ← Back
-          </Button>
+          <Button type="button" variant="outline" onClick={goBack}>← Back</Button>
         ) : (
           <div />
         )}
         {step < STEPS.length - 1 ? (
-          <Button type="button" onClick={goNext}>
-            Next →
-          </Button>
+          <Button type="button" onClick={goNext}>Next →</Button>
         ) : (
           <Button type="submit" loading={submitting}>
-            🚀 Create Campaign
+            {coverUploading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Uploading image...
+              </span>
+            ) : (
+              '🚀 Create Campaign'
+            )}
           </Button>
         )}
       </div>

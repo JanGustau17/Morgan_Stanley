@@ -31,6 +31,7 @@ export interface Campaign {
   status: string;
   ref_tag: string | null;
   flyers_count: number;
+  cover_image_url: string | null;
   created_at: string;
 }
 

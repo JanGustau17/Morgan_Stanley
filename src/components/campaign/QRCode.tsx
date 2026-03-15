@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import QRCodeLib from 'qrcode';
-import { Button } from '@/components/ui/Button';
 
 interface QRCodeProps {
   campaignId: string;
@@ -19,19 +18,11 @@ export function QRCode({ campaignId, volunteerId }: QRCodeProps) {
     QRCodeLib.toDataURL(url, {
       width: 300,
       margin: 2,
-      color: { dark: '#166534', light: '#ffffff' },
+      color: { dark: '#000000', light: '#ffffff' },
     })
       .then(setDataUrl)
       .catch(() => setError('Failed to generate QR code'));
   }, [campaignId, volunteerId]);
-
-  function handleDownload() {
-    if (!dataUrl) return;
-    const link = document.createElement('a');
-    link.href = dataUrl;
-    link.download = `qr-${campaignId}.png`;
-    link.click();
-  }
 
   if (error) {
     return (
@@ -43,24 +34,19 @@ export function QRCode({ campaignId, volunteerId }: QRCodeProps) {
 
   if (!dataUrl) {
     return (
-      <div className="flex h-[300px] w-[300px] items-center justify-center rounded-lg border border-gray-200 bg-gray-50">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-green-600" />
+      <div className="flex h-[200px] w-[200px] items-center justify-center rounded-lg bg-white">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <img
-        src={dataUrl}
-        alt="Campaign QR Code"
-        width={300}
-        height={300}
-        className="rounded-lg border border-gray-200"
-      />
-      <Button variant="outline" size="sm" onClick={handleDownload}>
-        Download QR Code
-      </Button>
-    </div>
+    <img
+      src={dataUrl}
+      alt="Campaign QR Code"
+      width={200}
+      height={200}
+      className="rounded-lg"
+    />
   );
 }

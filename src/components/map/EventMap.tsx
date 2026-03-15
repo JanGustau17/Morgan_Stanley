@@ -10,13 +10,14 @@ interface EventMapProps {
   lat: number;
   lng: number;
   locationName: string;
+  containerClassName?: string;
 }
 
-export default function EventMap({ lat, lng, locationName }: EventMapProps) {
+export default function EventMap({ lat, lng, locationName, containerClassName = 'h-[400px] overflow-hidden rounded-xl border border-gray-200' }: EventMapProps) {
   const [showPopup, setShowPopup] = useState(true);
 
   return (
-    <div className="h-[400px] overflow-hidden rounded-xl border border-gray-200">
+    <div className={containerClassName}>
       <Map
         initialViewState={{ longitude: lng, latitude: lat, zoom: 15 }}
         style={{ width: '100%', height: '100%' }}
