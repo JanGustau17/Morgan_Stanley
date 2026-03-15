@@ -611,7 +611,7 @@ function CTASection() {
             Create Your Account
           </Link>
           <Link
-            href="/auth"
+            href="/login"
             className="px-8 py-4 rounded-full font-semibold text-white text-base border-2 border-white/35 hover:border-white/70 hover:bg-white/10 transition-all"
           >
             I Already Have an Account

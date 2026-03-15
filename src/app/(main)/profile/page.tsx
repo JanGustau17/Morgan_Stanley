@@ -77,7 +77,7 @@ export default async function ProfilePage() {
   const session = await auth();
   if (!session?.user) redirect('/auth');
 
-  const volunteerId = (session.user as Record<string, unknown>).volunteerId as string;
+  const volunteerId = session.user.volunteerId;
   if (!volunteerId) redirect('/auth');
 
   const supabase = createServiceClient();

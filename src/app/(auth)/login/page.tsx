@@ -1,21 +1,20 @@
-import SignupForm from "@/components/auth/SignupForm";
+import LoginForm from "@/components/auth/LoginForm";
 
-export default function SignupPage() {
+export default function LoginPage() {
   return (
-    <main
-      aria-label="Sign up page"
-    >
+    <main aria-label="Log in page">
       <div className="relative w-full max-w-[420px]">
         <div className="rounded-2xl border border-brand-border bg-brand-card p-8 shadow-sm">
           <h1 className="text-brand-green font-bold text-2xl mb-1">
-            Create Your Account
+            Welcome back
           </h1>
           <p className="text-brand-muted text-sm mb-6">
-            Find free food resources near you.
+            Log in to manage your volunteer campaigns.
           </p>
-          <SignupForm />
+          <LoginForm />
         </div>
       </div>
     </main>
   );
 }
+
