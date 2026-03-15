@@ -1,26 +1,41 @@
 import NextAuth from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
 import { createServiceClient } from './supabase/server';
+import { verifyPhoneToken } from './phone-token';
 import authConfig from '@/auth.config';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   trustHost: true,
+  providers: [
+    ...(authConfig.providers ?? []),
+    Credentials({
+      credentials: { token: { label: 'Token', type: 'text' } },
+      authorize: async (credentials) => {
+        const token = credentials?.token as string | undefined;
+        if (!token) return null;
+        const payload = verifyPhoneToken(token);
+        if (!payload) return null;
+        return { id: payload.volunteerId, email: null, name: null };
+      },
+    }),
+  ],
   callbacks: {
-    // Upsert volunteer by email so the same Google account always maps to the same row.
-    // On sign-out and sign-back-in, the same volunteerId is restored in the new session.
     async signIn({ user }) {
-      const supabase = createServiceClient();
-      const { error } = await supabase.from('volunteers').upsert(
-        {
-          email: user.email,
-          name: user.name,
-          avatar_url: user.image,
-        },
-        { onConflict: 'email' }
-      );
-      return !error;
+      if (user?.email) {
+        const supabase = createServiceClient();
+        const { error } = await supabase.from('volunteers').upsert(
+          {
+            email: user.email,
+            name: user.name,
+            avatar_url: user.image,
+          },
+          { onConflict: 'email' }
+        );
+        return !error;
+      }
+      return true;
     },
-    // On each sign-in (including after sign-out), load volunteer id and role so session is consistent.
     async jwt({ token, user }) {
       if (user?.email) {
         const supabase = createServiceClient();
@@ -33,6 +48,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.volunteerId = data.id;
           token.role = data.role;
         }
+      } else if (user?.id) {
+        token.volunteerId = user.id;
+        const supabase = createServiceClient();
+        const { data } = await supabase
+          .from('volunteers')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+        if (data) token.role = data.role;
       }
       return token;
     },

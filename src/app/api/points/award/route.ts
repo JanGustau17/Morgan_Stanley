@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getLevelForPoints } from '@/lib/points';
 import type { EventType } from '@/lib/types';
@@ -16,14 +17,31 @@ const VALID_EVENT_TYPES: EventType[] = [
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { volunteerId, campaignId, eventType, points } = body;
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    if (!volunteerId || !eventType || typeof points !== 'number' || points <= 0) {
+    const sessionVolunteerId = (session.user as unknown as { volunteerId?: string }).volunteerId;
+    const role = (session.user as unknown as { role?: string }).role;
+    if (!sessionVolunteerId) {
+      return NextResponse.json({ error: 'Volunteer profile not found' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { volunteerId: bodyVolunteerId, campaignId, eventType, points } = body;
+
+    if (!eventType || typeof points !== 'number' || points <= 0) {
       return NextResponse.json(
-        { error: 'volunteerId, eventType, and a positive points value are required' },
+        { error: 'eventType and a positive points value are required' },
         { status: 400 },
       );
+    }
+
+    const volunteerId =
+      role === 'admin' && bodyVolunteerId ? bodyVolunteerId : sessionVolunteerId;
+    if (role !== 'admin' && bodyVolunteerId && bodyVolunteerId !== sessionVolunteerId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     if (!VALID_EVENT_TYPES.includes(eventType)) {

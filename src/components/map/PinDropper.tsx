@@ -18,6 +18,7 @@ export default function PinDropper({ campaignId, onPinAdded, clickedPoint }: Pin
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -25,12 +26,14 @@ export default function PinDropper({ campaignId, onPinAdded, clickedPoint }: Pin
       setPendingPin(clickedPoint);
       setPhotoFile(null);
       setPhotoPreview(null);
+      setError(null);
     }
   }, [clickedPoint]);
 
   async function handleConfirm() {
     if (!pendingPin) return;
     setSaving(true);
+    setError(null);
 
     let photoUrl: string | null = null;
 
@@ -59,10 +62,12 @@ export default function PinDropper({ campaignId, onPinAdded, clickedPoint }: Pin
       if (res.ok) {
         onPinAdded({ lat: pendingPin.lat, lng: pendingPin.lng });
         resetState();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError((data?.error as string) ?? 'Failed to save pin. Try again.');
       }
     } catch {
-      onPinAdded({ lat: pendingPin.lat, lng: pendingPin.lng });
-      resetState();
+      setError('Network error. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -72,6 +77,7 @@ export default function PinDropper({ campaignId, onPinAdded, clickedPoint }: Pin
     setPendingPin(null);
     setPhotoFile(null);
     setPhotoPreview(null);
+    setError(null);
   }
 
   function handleCancel() {
@@ -114,7 +120,9 @@ export default function PinDropper({ campaignId, onPinAdded, clickedPoint }: Pin
               <p className="text-xs text-gray-500">
                 {pendingPin.lat.toFixed(5)}, {pendingPin.lng.toFixed(5)}
               </p>
-
+              {error && (
+                <p className="text-xs text-red-600">{error}</p>
+              )}
               {photoPreview && (
                 <img
                   src={photoPreview}

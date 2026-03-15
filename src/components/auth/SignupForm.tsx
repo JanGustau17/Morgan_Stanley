@@ -1,27 +1,172 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+
+type Step = "form" | "verify";
+
+/** Format US phone as (XXX) XXX-XXXX; strip non-digits, take first 10. */
+function formatUSPhone(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+  if (digits.length <= 3) return digits ? `(${digits}` : "";
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+/** From formatted (XXX) XXX-XXXX to E.164 +1XXXXXXXXXX */
+function toE164(formatted: string): string {
+  const digits = formatted.replace(/\D/g, "");
+  return digits.length === 10 ? `+1${digits}` : "";
+}
 
 export default function SignupForm() {
+  const router = useRouter();
+  const [step, setStep] = useState<Step>("form");
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
   const [phone, setPhone] = useState("");
   const [sendUpdates, setSendUpdates] = useState(false);
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setPhone(formatUSPhone(e.target.value));
+  }, []);
+
+  const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({
-      fullName,
-      password,
-      phone,
-      sendUpdates,
-    });
+    setError("");
+    if (/\s/.test(password)) {
+      setError("Password must not contain spaces.");
+      return;
+    }
+    const e164 = toE164(phone);
+    if (!e164 || e164.length !== 12) {
+      setError("Please enter a valid 10-digit phone number.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { error: otpError } = await supabase.auth.signInWithOtp({ phone: e164 });
+      if (otpError) throw otpError;
+      setStep("verify");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to send code");
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    const e164 = toE164(phone);
+    if (!e164 || !code.trim()) {
+      setError("Please enter the code we sent you.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const supabase = createClient();
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        phone: e164,
+        token: code.trim(),
+        type: "sms",
+      });
+      if (verifyError) throw verifyError;
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        setError("Session missing. Please try again.");
+        setLoading(false);
+        return;
+      }
+      const res = await fetch("/api/auth/phone-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessToken,
+          phone: e164,
+          name: fullName.trim() || undefined,
+          smsOptIn: sendUpdates,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Could not sign you in.");
+      }
+      const result = await signIn("credentials", {
+        token: data.token,
+        redirect: false,
+      });
+      if (result?.error) throw new Error(result.error);
+      router.push("/");
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Invalid or expired code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (step === "verify") {
+    return (
+      <form onSubmit={handleVerifyCode} className="space-y-5 font-sans">
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+        <p className="text-brand-muted text-sm">
+          We sent a code to +1 {phone.replace(/\D/g, "").slice(0, 3)} ***-**{phone.replace(/\D/g, "").slice(-2)}. Enter it below.
+        </p>
+        <div>
+          <label htmlFor="code" className="mb-1.5 block text-sm font-semibold text-brand-muted">
+            Verification code
+          </label>
+          <input
+            type="text"
+            id="code"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            placeholder="000000"
+            className="w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text outline-none transition-all duration-300 focus:border-brand-yellow focus:ring-2 focus:ring-brand-yellow/30"
+            aria-label="Verification code"
+            autoComplete="one-time-code"
+          />
+        </div>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => { setStep("form"); setError(""); setCode(""); }}
+            className="rounded-full border border-brand-border bg-white px-4 py-3 font-semibold text-brand-text"
+          >
+            Back
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="btn-cta-shimmer flex-1 rounded-full bg-brand-yellow py-3 font-bold text-brand-green disabled:opacity-70"
+          >
+            {loading ? "Verifying…" : "Verify & sign up"}
+          </button>
+        </div>
+      </form>
+    );
+  }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 font-sans">
+    <form onSubmit={handleSendCode} className="space-y-5 font-sans">
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
       {/* Full Name - static label */}
       <div>
         <label
@@ -52,10 +197,11 @@ export default function SignupForm() {
         </label>
         <div className="relative">
           <input
+            key="pwd"
             type={showPassword ? "text" : "password"}
             id="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => setPassword(e.target.value.replace(/\s/g, ""))}
             placeholder="Create a password"
             className="w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 pr-10 text-brand-text outline-none transition-all duration-300 hover:bg-gray-50/80 focus:border-brand-yellow focus:ring-2 focus:ring-brand-yellow/30"
             aria-label="Password"
@@ -63,7 +209,8 @@ export default function SignupForm() {
           />
           <button
             type="button"
-            onClick={() => setShowPassword(!showPassword)}
+            tabIndex={-1}
+            onClick={() => setShowPassword((p) => !p)}
             className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-brand-muted transition-colors hover:text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-yellow/30"
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
@@ -76,7 +223,7 @@ export default function SignupForm() {
         </div>
       </div>
 
-      {/* Phone - static label + country prefix */}
+      {/* Phone - static label + country prefix; placeholder without +1 */}
       <div>
         <label
           htmlFor="phone"
@@ -98,8 +245,8 @@ export default function SignupForm() {
             type="tel"
             id="phone"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+1 (555) 000-0000"
+            onChange={handlePhoneChange}
+            placeholder="(555) 000-0000"
             className="w-full border-0 bg-transparent px-3 py-2.5 text-brand-text outline-none placeholder:text-brand-muted"
             aria-label="Phone number"
             autoComplete="tel-national"
@@ -128,12 +275,13 @@ export default function SignupForm() {
         </label>
       </div>
 
-      {/* Sign Up button - keep shimmer */}
+      {/* Sign Up button - sends OTP */}
       <button
         type="submit"
-        className="btn-cta-shimmer w-full rounded-full bg-brand-yellow py-3 font-bold text-brand-green transition-colors hover:bg-brand-yellowHover focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:ring-offset-2 focus:ring-offset-brand-cream"
+        disabled={loading}
+        className="btn-cta-shimmer w-full rounded-full bg-brand-yellow py-3 font-bold text-brand-green transition-colors hover:bg-brand-yellowHover focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:ring-offset-2 focus:ring-offset-brand-cream disabled:opacity-70"
       >
-        Sign Up
+        {loading ? "Sending code…" : "Sign Up"}
       </button>
 
       {/* Divider */}
@@ -146,7 +294,7 @@ export default function SignupForm() {
         </div>
       </div>
 
-      {/* Sign in with Google - keep border glow on hover */}
+      {/* Sign in with Google */}
       <button
         type="button"
         onClick={() => signIn("google", { callbackUrl: "/" })}
