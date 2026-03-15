@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { signPhoneToken } from "@/lib/phone-token";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export async function POST(req: Request) {
   try {
@@ -16,14 +17,19 @@ export async function POST(req: Request) {
     if (!accessToken || !phone) {
       return NextResponse.json({ error: "Missing accessToken or phone" }, { status: 400 });
     }
-    if (!SUPABASE_URL) {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
       return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 });
     }
 
     const userRes = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
     });
     if (!userRes.ok) {
+      const errBody = await userRes.text().catch(() => "unknown");
+      console.error(`phone-session: /auth/v1/user returned ${userRes.status}: ${errBody}`);
       return NextResponse.json({ error: "Invalid or expired session" }, { status: 401 });
     }
     const supabaseUser = await userRes.json();
