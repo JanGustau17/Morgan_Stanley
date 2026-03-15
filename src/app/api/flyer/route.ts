@@ -20,7 +20,8 @@ export async function GET(request: NextRequest) {
     url.searchParams.set('lat', lat);
     url.searchParams.set('lng', lng);
     url.searchParams.set('locationName', locationName);
-    url.searchParams.set('flyerLang', lang);
+    // Lemontree API only supports 'en' and 'es'
+    url.searchParams.set('flyerLang', lang === 'es' ? 'es' : 'en');
     url.searchParams.set('ref', ref);
 
     const response = await fetch(url.toString());

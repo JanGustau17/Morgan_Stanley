@@ -6,7 +6,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { VolunteerList } from '@/components/campaign/VolunteerList';
 import { QRCode } from '@/components/campaign/QRCode';
 import { ShareButtons } from '@/components/social/ShareButtons';
-import { FlyerPreview } from '@/components/campaign/FlyerPreview';
+import { FlyerStepWrapper } from '@/components/campaign/FlyerStepWrapper';
 import { EventPageClient } from './EventPageClient';
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
@@ -52,7 +52,10 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
   const eventUrl = `${baseUrl}/events/${id}`;
-  const hasFlyer = campaign.lat != null && campaign.lng != null && campaign.location_name;
+  const hasFlyer =
+    campaign.lat != null && campaign.lng != null &&
+    (campaign.lat !== 0 || campaign.lng !== 0) &&
+    campaign.location_name;
   const fillPct = Math.min(100, (volunteers.length / campaign.volunteers_needed) * 100);
 
   return (
@@ -127,12 +130,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
             <p className="mb-4 text-sm" style={{ color: '#101726', opacity: 0.6 }}>
               Share or print this to spread the word.
             </p>
-            <FlyerPreview
+            <FlyerStepWrapper
               lat={campaign.lat}
               lng={campaign.lng}
-              locationName={campaign.location_name}
+              locationName={campaign.location_name ?? ''}
               lang={campaign.language ?? 'en'}
               campaignId={id}
+              volunteerId={volunteerId}
             />
           </section>
         )}

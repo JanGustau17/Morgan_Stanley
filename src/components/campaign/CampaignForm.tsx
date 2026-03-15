@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,6 +10,19 @@ import { ImagePlus, X, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { uploadFile } from '@/lib/supabase/upload';
+import { FlyerStep } from '@/components/campaign/FlyerStep';
+
+const LocationPicker = dynamic(
+  () => import('@/components/map/LocationPicker'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50">
+        <div className="h-5 w-5 animate-spin rounded-full border-4 border-gray-300 border-t-green-600" />
+      </div>
+    ),
+  },
+);
 
 const campaignSchema = z.object({
   name: z.string().min(3, 'Name must be at least 3 characters'),
@@ -32,7 +46,7 @@ const campaignSchema = z.object({
 
 type CampaignFormData = z.infer<typeof campaignSchema>;
 
-const STEPS = ['Details', 'Audience', 'Location', 'Review'] as const;
+const STEPS = ['Details', 'Audience', 'Location', 'Flyer', 'Review'] as const;
 
 const TARGET_GROUPS = [
   { id: 'families' as const, label: 'Families', icon: '👨‍👩‍👧‍👦', desc: 'Parents & children' },
@@ -88,7 +102,7 @@ function QRPlaceholder({ value, size = 120 }: { value: string; size?: number }) 
   );
 }
 
-export function CampaignForm() {
+export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -120,12 +134,17 @@ export function CampaignForm() {
 
   const watchedTargetGroup = watch('target_group');
   const watchedLanguage = watch('language');
+  const watchedLat = watch('lat');
+  const watchedLng = watch('lng');
+  const watchedLocationName = watch('location_name');
+  const watchedNeighborhood = watch('neighborhood');
 
   const fieldsPerStep: (keyof CampaignFormData)[][] = [
     ['name', 'campaign_date', 'neighborhood', 'location_name'],
     ['target_group', 'language', 'volunteers_needed'],
     ['lat', 'lng'],
-    [],
+    [], // Flyer step — no form fields to validate
+    [], // Review
   ];
 
   async function goNext() {
@@ -342,11 +361,15 @@ export function CampaignForm() {
 
       {step === 2 && (
         <div className="space-y-4">
-          <div className="h-52 rounded-xl overflow-hidden bg-gradient-to-br from-green-100 via-green-50 to-emerald-100 border-2 border-dashed border-green-300 flex flex-col items-center justify-center gap-2">
-            <span className="text-4xl">🗺️</span>
-            <span className="text-sm font-semibold text-green-700">Map preview loads here</span>
-            <span className="text-xs text-green-600/60">Click to drop a pin or enter coordinates below</span>
-          </div>
+          <LocationPicker
+            initialQuery={[watchedLocationName, watchedNeighborhood].filter(Boolean).join(', ')}
+            lat={watchedLat ?? 0}
+            lng={watchedLng ?? 0}
+            onChange={(lat, lng) => {
+              setValue('lat', lat, { shouldValidate: true });
+              setValue('lng', lng, { shouldValidate: true });
+            }}
+          />
           <div className="grid grid-cols-2 gap-4">
             <Input label="Latitude *" type="number" step="any" placeholder="e.g. 40.7945" error={errors.lat?.message} {...register('lat')} />
             <Input label="Longitude *" type="number" step="any" placeholder="e.g. -73.9380" error={errors.lng?.message} {...register('lng')} />
@@ -357,6 +380,16 @@ export function CampaignForm() {
       )}
 
       {step === 3 && (
+        <FlyerStep
+          lat={watchedLat ?? 0}
+          lng={watchedLng ?? 0}
+          locationName={watchedLocationName ?? ''}
+          lang={watchedLanguage ?? 'en'}
+          volunteerId={volunteerId}
+        />
+      )}
+
+      {step === 4 && (
         <div className="space-y-6">
           <div className="rounded-xl border border-gray-200 bg-gradient-to-br from-green-50 to-amber-50 p-5">
             <h3 className="text-lg font-bold text-gray-900 mb-3">{values.name || 'Untitled Campaign'}</h3>
