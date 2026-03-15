@@ -73,14 +73,16 @@ export default function SignupForm() {
     setLoading(true);
     try {
       const supabase = createClient();
-      const { error: verifyError } = await supabase.auth.verifyOtp({
+      const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
         phone: e164,
         token: code.trim(),
         type: "sms",
       });
       if (verifyError) throw verifyError;
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
+      // Use session from verifyOtp response; getSession() can be empty due to async persistence
+      const accessToken =
+        verifyData?.session?.access_token ??
+        (await supabase.auth.getSession()).data.session?.access_token;
       if (!accessToken) {
         setError("Session missing. Please try again.");
         setLoading(false);
