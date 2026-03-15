@@ -1,5 +1,4 @@
 import { Trophy } from 'lucide-react';
-import { auth } from '@/lib/auth';
 import { createServiceClient } from '@/lib/supabase/server';
 import { Leaderboard } from '@/components/gamification/Leaderboard';
 
@@ -10,7 +9,7 @@ export const metadata = {
 export default async function LeaderboardPage() {
   const supabase = createServiceClient();
 
-  const [leaderboardResult, campaignsResult, session] = await Promise.all([
+  const [leaderboardResult, campaignsResult] = await Promise.all([
     supabase
       .from('volunteers')
       .select('id, name, avatar_url, total_points, weekly_points, level, streak_days')
@@ -20,17 +19,13 @@ export default async function LeaderboardPage() {
       .from('campaigns')
       .select('id, name')
       .order('name'),
-    auth(),
   ]);
 
   const initialData = leaderboardResult.data ?? [];
   const campaigns = campaignsResult.data ?? [];
-  const currentUserId = session?.user
-    ? ((session.user as Record<string, unknown>).volunteerId as string) ?? null
-    : null;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
+    <div className="mx-auto max-w-4xl px-4 pt-24 pb-8">
       <div className="mb-8 flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-100">
           <Trophy className="h-6 w-6 text-green-700" />
@@ -45,7 +40,7 @@ export default async function LeaderboardPage() {
 
       <Leaderboard
         initialData={initialData}
-        currentUserId={currentUserId}
+        currentUserId={null}
         campaigns={campaigns}
       />
     </div>
