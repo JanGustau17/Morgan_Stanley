@@ -8,7 +8,7 @@ import { formatDate } from '@/lib/utils';
 
 const EventMap = dynamic(() => import('@/components/map/EventMap'), {
   ssr: false,
-  loading: () => <div className="h-full w-full animate-pulse bg-gray-200" />,
+  loading: () => <div className="h-full w-full animate-pulse" style={{ background: '#e8e0cc' }} />,
 });
 
 const MapWithPins = dynamic(() => import('./MapWithPins'), { ssr: false });
@@ -28,10 +28,10 @@ interface EventPageClientProps {
   language: string;
 }
 
-const statusBadgeClass: Record<string, string> = {
-  active:    'bg-amber-100 text-amber-700',
-  upcoming:  'bg-gray-100 text-gray-600',
-  completed: 'bg-gray-100 text-gray-400',
+const statusBadgeStyle: Record<string, React.CSSProperties> = {
+  active:    { background: '#ffcc1022', color: '#7a5f00' },
+  upcoming:  { background: '#f0f0ee',   color: '#888'    },
+  completed: { background: '#f0f0ee',   color: '#aaa'    },
 };
 
 export function EventPageClient({
@@ -73,7 +73,7 @@ export function EventPageClient({
 
   return (
     <>
-      {/* Full-bleed map — no overlay */}
+      {/* Full-bleed map */}
       <div className="h-[400px] w-full overflow-hidden">
         {mapCenter ? (
           <EventMap
@@ -83,48 +83,60 @@ export function EventPageClient({
             containerClassName="h-full w-full"
           />
         ) : (
-          <div className="h-full w-full bg-gray-100" />
+          <div className="h-full w-full" style={{ background: '#e8e0cc' }} />
         )}
       </div>
 
-      {/* Event header — below the map */}
+      {/* Event header */}
       <div className="mx-auto max-w-3xl px-4 py-8">
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${statusBadgeClass[status] ?? statusBadgeClass.upcoming}`}>
+          <span
+            className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize"
+            style={statusBadgeStyle[status] ?? statusBadgeStyle.upcoming}
+          >
             {status}
           </span>
           {language !== 'en' && (
-            <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
+            <span
+              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold"
+              style={{ background: '#5C3D8F22', color: '#5C3D8F' }}
+            >
               {language.toUpperCase()}
             </span>
           )}
         </div>
 
-        <h1 className="mb-4 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+        <h1
+          className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl"
+          style={{ color: '#101726', fontFamily: "Georgia, 'Times New Roman', serif" }}
+        >
           {campaignName}
         </h1>
 
-        <div className="mb-6 flex flex-wrap gap-4 text-sm text-gray-500">
+        <div className="mb-6 flex flex-wrap gap-4 text-sm" style={{ color: '#101726', opacity: 0.6 }}>
           {campaignDate && (
             <span className="flex items-center gap-1.5">
-              <CalendarDays className="h-4 w-4 shrink-0 text-indigo-400" />
+              <CalendarDays className="h-4 w-4 shrink-0" style={{ color: '#008A81' }} />
               {formatDate(campaignDate)}
             </span>
           )}
           {locationName && (
             <span className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4 shrink-0 text-indigo-400" />
+              <MapPin className="h-4 w-4 shrink-0" style={{ color: '#008A81' }} />
               {locationName}
             </span>
           )}
           <span className="flex items-center gap-1.5">
-            <Users className="h-4 w-4 shrink-0 text-indigo-400" />
+            <Users className="h-4 w-4 shrink-0" style={{ color: '#008A81' }} />
             {volunteersCount} / {volunteersNeeded} volunteers
           </span>
         </div>
 
         {joined ? (
-          <div className="inline-flex items-center gap-2 rounded-xl bg-green-50 px-5 py-3 text-sm font-semibold text-green-700">
+          <div
+            className="inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold"
+            style={{ background: '#008A8115', color: '#008A81' }}
+          >
             <CheckCircle2 className="h-5 w-5" />
             You&apos;ve joined this event!
           </div>
@@ -133,14 +145,15 @@ export function EventPageClient({
             <button
               onClick={handleJoin}
               disabled={loading}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-900 px-6 py-3.5 text-base font-semibold text-white transition-colors hover:bg-indigo-950 disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3.5 text-base font-semibold text-white transition-opacity hover:opacity-90 disabled:pointer-events-none disabled:opacity-50 sm:w-auto"
+              style={{ background: '#5C3D8F' }}
             >
               {loading
                 ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                 : <UserPlus className="h-5 w-5" />}
               Join This Event
             </button>
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p className="text-sm" style={{ color: '#e53e3e' }}>{error}</p>}
           </div>
         )}
       </div>
@@ -148,9 +161,14 @@ export function EventPageClient({
       {/* Flyer coverage map (joined volunteers only) */}
       {joined && (
         <div className="mx-auto max-w-3xl px-4 pb-2">
-          <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <h2 className="mb-1 text-lg font-semibold text-gray-900">Flyer Coverage</h2>
-            <p className="mb-4 text-sm text-gray-500">
+          <div className="rounded-2xl border bg-white p-6 shadow-sm" style={{ borderColor: '#e8e0cc' }}>
+            <h2
+              className="mb-1 text-lg font-semibold"
+              style={{ color: '#101726', fontFamily: "Georgia, 'Times New Roman', serif" }}
+            >
+              Flyer Coverage
+            </h2>
+            <p className="mb-4 text-sm" style={{ color: '#101726', opacity: 0.6 }}>
               Click the map to drop a pin where you&apos;ve placed flyers.
             </p>
             <MapWithPins

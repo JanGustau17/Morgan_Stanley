@@ -36,8 +36,7 @@ export function PdfViewer({ url }: PdfViewerProps) {
           canvas.width = scaledViewport.width;
           canvas.height = scaledViewport.height;
 
-          const ctx = canvas.getContext('2d')!;
-          await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+          await page.render({ canvas, viewport: scaledViewport }).promise;
           if (cancelled) return;
           urls.push(canvas.toDataURL('image/png'));
         }

@@ -56,7 +56,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const fillPct = Math.min(100, (volunteers.length / campaign.volunteers_needed) * 100);
 
   return (
-    <div className="relative left-1/2 -translate-x-1/2 w-screen -my-8 bg-[#fdf8ec]">
+    <div className="relative left-1/2 -translate-x-1/2 w-screen mt-[60px]" style={{ background: '#fff6E0' }}>
 
       {/* Map + event header + flyer coverage (client) */}
       <EventPageClient
@@ -82,32 +82,36 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       <div className="mx-auto max-w-3xl space-y-5 px-4 pb-10">
 
         {/* Volunteers */}
-        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+        <section className="rounded-2xl border bg-white p-6 shadow-sm" style={{ borderColor: '#e8e0cc' }}>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Volunteers</h2>
-            <span className="text-sm font-semibold text-indigo-600">
+            <h2 className="text-lg font-semibold" style={{ color: '#101726', fontFamily: "Georgia, 'Times New Roman', serif" }}>
+              Volunteers
+            </h2>
+            <span className="text-sm font-semibold" style={{ color: '#008A81' }}>
               {volunteers.length} / {campaign.volunteers_needed} joined
             </span>
           </div>
-          <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-gray-100">
+          <div className="mb-5 h-1.5 overflow-hidden rounded-full" style={{ background: '#e8e0cc' }}>
             <div
-              className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-indigo-700 transition-all"
-              style={{ width: `${fillPct}%` }}
+              className="h-full rounded-full transition-all"
+              style={{ width: `${fillPct}%`, background: '#008A81' }}
             />
           </div>
           <VolunteerList volunteers={volunteers} />
         </section>
 
         {/* Spread the Word */}
-        <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-          <h2 className="mb-5 text-lg font-semibold text-gray-900">Spread the Word</h2>
+        <section className="rounded-2xl border bg-white p-6 shadow-sm" style={{ borderColor: '#e8e0cc' }}>
+          <h2 className="mb-5 text-lg font-semibold" style={{ color: '#101726', fontFamily: "Georgia, 'Times New Roman', serif" }}>
+            Spread the Word
+          </h2>
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
             <div className="flex-1">
               <ShareButtons url={eventUrl} title={`Join "${campaign.name}" on Lemontree!`} />
             </div>
             <div className="shrink-0 flex flex-col items-center gap-2">
               <QRCode campaignId={id} volunteerId={volunteerId} />
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+              <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#101726', opacity: 0.4 }}>
                 Scan to join
               </p>
             </div>
@@ -116,9 +120,13 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
 
         {/* Event Flyer */}
         {hasFlyer && (
-          <section className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
-            <h2 className="mb-1 text-lg font-semibold text-gray-900">Event Flyer</h2>
-            <p className="mb-4 text-sm text-gray-500">Share or print this to spread the word.</p>
+          <section className="rounded-2xl border bg-white p-6 shadow-sm" style={{ borderColor: '#e8e0cc' }}>
+            <h2 className="mb-1 text-lg font-semibold" style={{ color: '#101726', fontFamily: "Georgia, 'Times New Roman', serif" }}>
+              Event Flyer
+            </h2>
+            <p className="mb-4 text-sm" style={{ color: '#101726', opacity: 0.6 }}>
+              Share or print this to spread the word.
+            </p>
             <FlyerPreview
               lat={campaign.lat}
               lng={campaign.lng}
@@ -131,20 +139,23 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
       </div>
 
       {/* Full-width coordination CTA */}
-      <div className="bg-indigo-900 px-4 py-12">
+      <div className="px-4 py-12" style={{ background: '#008A81' }}>
         <div className="mx-auto max-w-3xl flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-indigo-300 mb-1">
+            <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>
               Event Day
             </p>
-            <h3 className="text-2xl font-bold text-white">Ready to coordinate?</h3>
-            <p className="mt-1 text-sm text-indigo-200">
+            <h3 className="text-2xl font-bold text-white" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+              Ready to coordinate?
+            </h3>
+            <p className="mt-1 text-sm" style={{ color: 'rgba(255,255,255,0.7)' }}>
               Manage your team and track flyer coverage in real time.
             </p>
           </div>
           <Link
             href={`/events/${id}/coordination`}
-            className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-indigo-900 shadow-lg transition-colors hover:bg-indigo-50"
+            className="shrink-0 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 font-semibold shadow-lg transition-colors hover:bg-[#fff6E0]"
+            style={{ color: '#101726' }}
           >
             Go to Coordination Page
             <ArrowRight className="h-4 w-4" />
