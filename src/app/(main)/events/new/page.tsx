@@ -16,11 +16,11 @@ export default async function NewEventPage() {
   const volunteerId = (session.user as Record<string, unknown>).volunteerId as string | undefined;
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <h1 className="mb-2 text-2xl font-bold text-gray-900">
+    <div className="mx-auto max-w-2xl px-4 py-6 sm:py-10">
+      <h1 className="mb-2 text-xl font-bold text-gray-900 sm:text-2xl">
         Create a Flyering Campaign
       </h1>
-      <p className="mb-8 text-gray-500">
+      <p className="mb-6 text-gray-500 sm:mb-8">
         Set up a new flyering event to spread the word in your community.
       </p>
       <CampaignForm volunteerId={volunteerId} />

@@ -19,6 +19,12 @@ export const metadata: Metadata = {
     'Connect food-insecure families to free food resources through volunteer flyering campaigns.',
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

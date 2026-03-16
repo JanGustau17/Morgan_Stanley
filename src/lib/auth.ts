@@ -4,9 +4,25 @@ import { createServiceClient } from './supabase/server';
 import { verifyPhoneToken } from './phone-token';
 import authConfig from '@/auth.config';
 
+// On Vercel: set NEXTAUTH_URL to your exact production URL (e.g. https://your-app.vercel.app) with no trailing slash.
+// Ensure Google Cloud Console redirect URI matches: ${NEXTAUTH_URL}/api/auth/callback/google
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   trustHost: true,
+  cookies: {
+    pkceCodeVerifier: {
+      name: process.env.NEXTAUTH_URL?.startsWith('https://')
+        ? '__Secure-authjs.pkce.code_verifier'
+        : 'authjs.pkce.code_verifier',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NEXTAUTH_URL?.startsWith('https://') ?? true,
+        maxAge: 60 * 15,
+      },
+    },
+  },
   providers: [
     ...(authConfig.providers ?? []),
     Credentials({

@@ -30,6 +30,7 @@ This is **Lemontree Volunteers** — a full-stack Next.js volunteer coordination
 ### Route Groups
 - `(auth)` — login/signup pages (no main nav)
 - `(main)` — all authenticated app pages with persistent nav bar
+- `(main)/admin` — admin-only dashboard; layout in `src/app/(main)/admin/layout.tsx` checks `session.user.role === 'admin'` and redirects others. Sidebar: Overview, Users, Events, Resources, Storage, Logs, System Status, Settings. Frontend checks are insufficient; every admin API must call `requireAdmin()` from `src/lib/admin.ts`.
 
 ### Supabase Clients
 - **Server**: `src/lib/supabase/server.ts` — `createServiceClient()` uses `SUPABASE_SERVICE_ROLE_KEY`, used in API routes and server components
@@ -45,7 +46,16 @@ Points are awarded via `/api/points/award`. Levels (Seedling → Lemontree) are 
 Map components (`src/components/map/`) must be dynamically imported with `ssr: false` to avoid Mapbox SSR issues. EXIF parsing (`exifr`) extracts GPS coordinates from uploaded flyer photos.
 
 ### Authentication
-`src/lib/auth.ts` configures NextAuth v5 with Google. Session includes `volunteerId` and `role`. The `volunteers` table is synced on first sign-in.
+`src/lib/auth.ts` configures NextAuth v5 with Google. Session includes `volunteerId` and `role` (from `volunteers` table). Phone OTP is handled via Supabase Auth + Twilio Verify; `src/app/api/auth/phone-session/route.ts` issues the NextAuth session after OTP verification. The `volunteers` table is synced on first sign-in.
+
+### Chat and message types
+`Message` in `src/lib/types.ts` has optional `sender?: MessageSender`. `MessageSender` is `{ id, name, avatar_url }` — minimal fields for chat display. Full `Volunteer` rows from the DB are assignable to `MessageSender`. Use `MessageSender` (not `Volunteer`) for optimistic chat messages and anywhere only sender display is needed.
+
+### Resources
+Resources are fetched from an external API. Set `LEMONTREE_API_BASE` (e.g. `https://platform.foodhelpline.org`) for the resources API; there is no local resources table. Admin Resources page is informational only.
+
+### Build and Next.js config
+`next.config.ts` sets `turbopack.root` to the project directory so the correct `node_modules` is used when multiple lockfiles exist. `serverExternalPackages: ["html2canvas", "jspdf"]` avoids bundling issues for PDF export in `FlyerStep.tsx`. Optional: add `"type": "module"` to `package.json` to silence the tailwind.config ESM warning on Vercel.
 
 ### Environment Variables
 ```

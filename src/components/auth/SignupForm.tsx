@@ -1,173 +1,86 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type Step = "form" | "verify";
-
-/** Format US phone as (XXX) XXX-XXXX; strip non-digits, take first 10. */
-function formatUSPhone(value: string): string {
-  const digits = value.replace(/\D/g, "").slice(0, 10);
-  if (digits.length <= 3) return digits ? `(${digits}` : "";
-  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
-}
-
-/** From formatted (XXX) XXX-XXXX to E.164 +1XXXXXXXXXX */
-function toE164(formatted: string): string {
-  const digits = formatted.replace(/\D/g, "");
-  return digits.length === 10 ? `+1${digits}` : "";
-}
+type FormStatus = "idle" | "loading" | "success" | "error" | "exists";
 
 export default function SignupForm() {
-  const router = useRouter();
-  const [step, setStep] = useState<Step>("form");
-  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [sendUpdates, setSendUpdates] = useState(false);
-  const [code, setCode] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [status, setStatus] = useState<FormStatus>("idle");
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setPhone(formatUSPhone(e.target.value));
-  }, []);
-
-  const handleSendCode = async (e: React.FormEvent) => {
+  async function handleEmailSignup(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-    if (/\s/.test(password)) {
-      setError("Password must not contain spaces.");
+    setErrorMsg("");
+
+    if (!fullName.trim() || !email.trim() || !password.trim()) {
+      setStatus("error");
+      setErrorMsg("Please fill in your name, email, and password.");
       return;
     }
-    const e164 = toE164(phone);
-    if (!e164 || e164.length !== 12) {
-      setError("Please enter a valid 10-digit phone number.");
+    if (password.length < 6) {
+      setStatus("error");
+      setErrorMsg("Password must be at least 6 characters.");
       return;
     }
-    setLoading(true);
+
+    setStatus("loading");
     try {
       const supabase = createClient();
-      const { error: otpError } = await supabase.auth.signInWithOtp({ phone: e164 });
-      if (otpError) throw otpError;
-      setStep("verify");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to send code");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    const e164 = toE164(phone);
-    if (!e164 || !code.trim()) {
-      setError("Please enter the code we sent you.");
-      return;
-    }
-    setLoading(true);
-    try {
-      const supabase = createClient();
-      const { error: verifyError } = await supabase.auth.verifyOtp({
-        phone: e164,
-        token: code.trim(),
-        type: "sms",
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { full_name: fullName.trim(), sms_opt_in: sendUpdates },
+        },
       });
-      if (verifyError) throw verifyError;
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        setError("Session missing. Please try again.");
-        setLoading(false);
+
+      if (error) {
+        setStatus("error");
+        setErrorMsg(error.message);
         return;
       }
-      const res = await fetch("/api/auth/phone-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accessToken,
-          phone: e164,
-          name: fullName.trim() || undefined,
-          smsOptIn: sendUpdates,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error ?? "Could not sign you in.");
-      }
-      const result = await signIn("credentials", {
-        token: data.token,
-        redirect: false,
-      });
-      if (result?.error) throw new Error(result.error);
-      router.push("/");
-      router.refresh();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Invalid or expired code");
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  if (step === "verify") {
-    return (
-      <form onSubmit={handleVerifyCode} className="space-y-5 font-sans">
-        {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-        <p className="text-brand-muted text-sm">
-          We sent a code to +1 {phone.replace(/\D/g, "").slice(0, 3)} ***-**{phone.replace(/\D/g, "").slice(-2)}. Enter it below.
-        </p>
-        <div>
-          <label htmlFor="code" className="mb-1.5 block text-sm font-semibold text-brand-muted">
-            Verification code
-          </label>
-          <input
-            type="text"
-            id="code"
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            placeholder="000000"
-            className="w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text outline-none transition-all duration-300 focus:border-brand-yellow focus:ring-2 focus:ring-brand-yellow/30"
-            aria-label="Verification code"
-            autoComplete="one-time-code"
-          />
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => { setStep("form"); setError(""); setCode(""); }}
-            className="rounded-full border border-brand-border bg-white px-4 py-3 font-semibold text-brand-text"
-          >
-            Back
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-cta-shimmer flex-1 rounded-full bg-brand-yellow py-3 font-bold text-brand-green disabled:opacity-70"
-          >
-            {loading ? "Verifying…" : "Verify & sign up"}
-          </button>
-        </div>
-      </form>
-    );
+      // Supabase returns identities: [] when the email is already registered
+      if (!data.user?.identities || data.user.identities.length === 0) {
+        setStatus("exists");
+        return;
+      }
+
+      // If email confirmation is required, show success message.
+      // If not required (auto-confirmed), sign in immediately via email-session.
+      if (data.session) {
+        // Email confirmation disabled — sign in right away
+        const sessionRes = await fetch("/api/auth/email-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim(), password }),
+        });
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json().catch(() => null) as { token?: string } | null;
+          if (sessionData?.token) {
+            await signIn("credentials", { token: sessionData.token, callbackUrl: "/" });
+            return;
+          }
+        }
+      }
+
+      setStatus("success");
+    } catch {
+      setStatus("error");
+      setErrorMsg("Something went wrong. Please try again.");
+    }
   }
 
   return (
-    <form onSubmit={handleSendCode} className="space-y-5 font-sans">
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-      {/* Full Name - static label */}
+    <form onSubmit={handleEmailSignup} className="space-y-5 font-sans">
+      {/* Full Name */}
       <div>
         <label
           htmlFor="fullName"
@@ -187,7 +100,27 @@ export default function SignupForm() {
         />
       </div>
 
-      {/* Password - static label + show/hide */}
+      {/* Email */}
+      <div>
+        <label
+          htmlFor="email"
+          className="mb-1.5 block text-sm font-semibold text-brand-muted"
+        >
+          Email
+        </label>
+        <input
+          type="email"
+          id="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          className="w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text outline-none transition-all duration-300 hover:bg-gray-50/80 focus:border-brand-yellow focus:ring-2 focus:ring-brand-yellow/30"
+          aria-label="Email"
+          autoComplete="email"
+        />
+      </div>
+
+      {/* Password */}
       <div>
         <label
           htmlFor="password"
@@ -197,11 +130,10 @@ export default function SignupForm() {
         </label>
         <div className="relative">
           <input
-            key="pwd"
             type={showPassword ? "text" : "password"}
             id="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value.replace(/\s/g, ""))}
+            onChange={(e) => setPassword(e.target.value)}
             placeholder="Create a password"
             className="w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 pr-10 text-brand-text outline-none transition-all duration-300 hover:bg-gray-50/80 focus:border-brand-yellow focus:ring-2 focus:ring-brand-yellow/30"
             aria-label="Password"
@@ -223,38 +155,7 @@ export default function SignupForm() {
         </div>
       </div>
 
-      {/* Phone - static label + country prefix; placeholder without +1 */}
-      <div>
-        <label
-          htmlFor="phone"
-          className="mb-1.5 block text-sm font-semibold text-brand-muted"
-        >
-          Phone Number
-        </label>
-        <div className="flex rounded-lg border border-brand-border bg-white transition-all duration-300 focus-within:border-brand-yellow focus-within:ring-2 focus-within:ring-brand-yellow/30 hover:bg-gray-50/80">
-          <span
-            className="flex items-center gap-1.5 border-r border-brand-border px-3 text-sm text-brand-muted"
-            aria-hidden
-          >
-            <span className="text-base" role="img" aria-hidden>
-              🇺🇸
-            </span>
-            +1
-          </span>
-          <input
-            type="tel"
-            id="phone"
-            value={phone}
-            onChange={handlePhoneChange}
-            placeholder="(555) 000-0000"
-            className="w-full border-0 bg-transparent px-3 py-2.5 text-brand-text outline-none placeholder:text-brand-muted"
-            aria-label="Phone number"
-            autoComplete="tel-national"
-          />
-        </div>
-      </div>
-
-      {/* Single opt-in checkbox: Send me product updates and news */}
+      {/* Opt-in checkbox */}
       <div className="pt-1">
         <label className="flex cursor-pointer items-start gap-3">
           <input
@@ -275,13 +176,45 @@ export default function SignupForm() {
         </label>
       </div>
 
-      {/* Sign Up button - sends OTP */}
+      {/* Inline feedback messages */}
+      {status === "success" && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          ✅ Account created! Check your email to confirm your address, then{" "}
+          <a href="/login" className="font-semibold underline underline-offset-2">
+            sign in
+          </a>
+          .
+        </div>
+      )}
+      {status === "exists" && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          This email is already registered.{" "}
+          <a href="/login" className="font-semibold underline underline-offset-2">
+            Sign in
+          </a>{" "}
+          or{" "}
+          <a
+            href="/auth/forgot-password"
+            className="font-semibold underline underline-offset-2"
+          >
+            reset your password
+          </a>
+          .
+        </div>
+      )}
+      {status === "error" && errorMsg && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMsg}
+        </div>
+      )}
+
+      {/* Primary CTA: email/password sign up */}
       <button
         type="submit"
-        disabled={loading}
-        className="btn-cta-shimmer w-full rounded-full bg-brand-yellow py-3 font-bold text-brand-green transition-colors hover:bg-brand-yellowHover focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:ring-offset-2 focus:ring-offset-brand-cream disabled:opacity-70"
+        disabled={status === "loading" || status === "success"}
+        className="btn-cta-shimmer w-full rounded-full bg-brand-yellow py-3 font-bold text-brand-green transition-colors hover:bg-brand-yellowHover focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:ring-offset-2 focus:ring-offset-brand-cream disabled:opacity-60"
       >
-        {loading ? "Sending code…" : "Sign Up"}
+        {status === "loading" ? "Creating account…" : "Create account"}
       </button>
 
       {/* Divider */}
@@ -294,12 +227,17 @@ export default function SignupForm() {
         </div>
       </div>
 
-      {/* Sign in with Google */}
+      {/* Google OAuth button */}
       <button
         type="button"
-        onClick={() => signIn("google", { callbackUrl: "/" })}
+        onClick={() =>
+          signIn("google", {
+            callbackUrl: "/",
+            login_hint: email || undefined,
+          })
+        }
         className="flex w-full items-center justify-center gap-2 rounded-full border border-brand-border bg-white py-3 text-sm font-medium text-brand-text transition-all duration-300 hover:bg-brand-cream hover:border-brand-green/40 hover:shadow-[0_0_12px_rgba(45,106,79,0.12)] focus:outline-none focus:ring-2 focus:ring-brand-yellow/30"
-        aria-label="Sign in with Google"
+        aria-label="Sign up with Google"
       >
         <GoogleIcon className="h-5 w-5" />
         Sign up with Google

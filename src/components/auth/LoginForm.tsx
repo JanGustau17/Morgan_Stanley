@@ -5,58 +5,90 @@ import { signIn } from "next-auth/react";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    console.log({
-      phone,
-      password,
-    });
-  };
+    setErrorMsg("");
+
+    if (!email.trim() || !password.trim()) {
+      setErrorMsg("Please enter your email and password.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/email-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await res.json().catch(() => null) as { token?: string; error?: string } | null;
+
+      if (!res.ok || !data?.token) {
+        setErrorMsg(data?.error ?? "Invalid email or password.");
+        return;
+      }
+
+      const result = await signIn("credentials", {
+        token: data.token,
+        callbackUrl: "/",
+        redirect: false,
+      });
+
+      if (result?.error) {
+        setErrorMsg("Sign-in failed. Please try again.");
+      } else {
+        window.location.href = result?.url ?? "/";
+      }
+    } catch {
+      setErrorMsg("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 font-sans">
-      {/* Phone - static label + country prefix */}
+      {/* Email */}
       <div>
         <label
-          htmlFor="phone"
+          htmlFor="email"
           className="mb-1.5 block text-sm font-semibold text-brand-muted"
         >
-          Phone Number
+          Email
         </label>
-        <div className="flex rounded-lg border border-brand-border bg-white transition-all duration-300 focus-within:border-brand-yellow focus-within:ring-2 focus-within:ring-brand-yellow/30 hover:bg-gray-50/80">
-          <span
-            className="flex items-center gap-1.5 border-r border-brand-border px-3 text-sm text-brand-muted"
-            aria-hidden
-          >
-            <span className="text-base" role="img" aria-hidden>
-              🇺🇸
-            </span>
-            +1
-          </span>
-          <input
-            type="tel"
-            id="phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+1 (555) 000-0000"
-            className="w-full border-0 bg-transparent px-3 py-2.5 text-brand-text outline-none placeholder:text-brand-muted"
-            aria-label="Phone number"
-            autoComplete="tel"
-          />
-        </div>
+        <input
+          type="email"
+          id="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          className="w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text outline-none transition-all duration-300 hover:bg-gray-50/80 focus:border-brand-yellow focus:ring-2 focus:ring-brand-yellow/30"
+          aria-label="Email"
+          autoComplete="email"
+        />
       </div>
 
-      {/* Password - static label + show/hide */}
+      {/* Password */}
       <div>
-        <label
-          htmlFor="password"
-          className="mb-1.5 block text-sm font-semibold text-brand-muted"
-        >
-          Password
-        </label>
+        <div className="mb-1.5 flex items-center justify-between">
+          <label
+            htmlFor="password"
+            className="text-sm font-semibold text-brand-muted"
+          >
+            Password
+          </label>
+          <a
+            href="/auth/forgot-password"
+            className="text-xs font-medium text-brand-green underline underline-offset-2 hover:text-brand-green/80 transition-colors"
+          >
+            Forgot password?
+          </a>
+        </div>
         <div className="relative">
           <input
             type={showPassword ? "text" : "password"}
@@ -83,12 +115,20 @@ export default function LoginForm() {
         </div>
       </div>
 
-      {/* Login button - shimmer */}
+      {/* Error message */}
+      {errorMsg && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMsg}
+        </div>
+      )}
+
+      {/* Login button */}
       <button
         type="submit"
-        className="btn-cta-shimmer w-full rounded-full bg-brand-yellow py-3 font-bold text-brand-green transition-colors hover:bg-brand-yellowHover focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:ring-offset-2 focus:ring-offset-brand-cream"
+        disabled={loading}
+        className="btn-cta-shimmer w-full rounded-full bg-brand-yellow py-3 font-bold text-brand-green transition-colors hover:bg-brand-yellowHover focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:ring-offset-2 focus:ring-offset-brand-cream disabled:opacity-60"
       >
-        Log In
+        {loading ? "Signing in…" : "Log In"}
       </button>
 
       {/* Divider */}
@@ -101,7 +141,7 @@ export default function LoginForm() {
         </div>
       </div>
 
-      {/* Sign in with Google - keep border glow on hover */}
+      {/* Sign in with Google */}
       <button
         type="button"
         onClick={() => signIn("google", { callbackUrl: "/" })}

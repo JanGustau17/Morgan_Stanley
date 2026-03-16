@@ -14,6 +14,9 @@ export interface Volunteer {
   last_active: string | null;
   role: string;
   created_at: string;
+  banner_id: string | null;
+  banner_image: string | null;
+  greeting_id: string | null;
 }
 
 export interface Campaign {
@@ -78,6 +81,13 @@ export interface Badge {
   earned_at: string;
 }
 
+/** Minimal sender info for chat messages (display only). Full Volunteer rows are assignable to this. */
+export interface MessageSender {
+  id: string;
+  name: string | null;
+  avatar_url: string | null;
+}
+
 export interface Message {
   id: string;
   campaign_id: string;
@@ -85,7 +95,7 @@ export interface Message {
   content: string;
   type: string;
   created_at: string;
-  sender?: Volunteer;
+  sender?: MessageSender;
 }
 
 export interface CampaignWithVolunteers extends Campaign {

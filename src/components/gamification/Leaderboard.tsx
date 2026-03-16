@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState, useTransition } from 'react';
-import { Trophy, Flame, Calendar, Medal } from 'lucide-react';
+import { Trophy, Flame, Calendar } from 'lucide-react';
 import { Avatar } from '@/components/ui/Avatar';
 import { LevelBadge } from '@/components/gamification/LevelBadge';
-import { POINTS } from '@/lib/points';
 import { cn } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 interface LeaderboardVolunteer {
   id: string;
@@ -25,15 +26,13 @@ interface LeaderboardProps {
 
 type Period = 'weekly' | 'alltime';
 
-const POINT_LABELS: { type: string; label: string; points: number }[] = [
-  { type: 'qr_signup', label: 'QR sign-up', points: POINTS.qr_signup },
-  { type: 'social_signup', label: 'Social sign-up', points: POINTS.social_signup },
-  { type: 'volunteer_joined', label: 'Volunteer joined', points: POINTS.volunteer_joined },
-  { type: 'campaign_created', label: 'Campaign created', points: POINTS.campaign_created },
-  { type: 'flyer_pinned', label: 'Flyer pinned', points: POINTS.flyer_pinned },
-  { type: 'report_submitted', label: 'Report submitted', points: POINTS.report_submitted },
-  { type: 'new_neighborhood', label: 'New neighborhood', points: POINTS.new_neighborhood },
-  { type: 'streak_bonus', label: 'Streak bonus', points: POINTS.streak_bonus },
+const POINT_LABELS = [
+  { type: 'qr_signup', label: 'Flyer QR scanned', points: 50 },
+  { type: 'volunteer_joined', label: 'Volunteer joined your event', points: 25 },
+  { type: 'campaign_created', label: 'Created a campaign', points: 10 },
+  { type: 'flyer_pinned', label: 'Pinned a flyer location', points: 5 },
+  { type: 'report_submitted', label: 'Submitted a report', points: 20 },
+  { type: 'new_neighborhood', label: 'New neighborhood reached', points: 50 },
 ];
 
 function getRankStyle(rank: number) {
@@ -50,27 +49,27 @@ function getRankBg(rank: number) {
   return 'bg-white border-gray-100';
 }
 
-function MedalIcon({ rank }: { rank: number }) {
-  if (rank > 3) return null;
-  const colors = {
-    1: 'text-amber-500',
-    2: 'text-gray-400',
-    3: 'text-amber-700',
-  } as Record<number, string>;
-  return <Medal className={cn('h-5 w-5', colors[rank])} />;
-}
-
 export function Leaderboard({ initialData, currentUserId, campaigns }: LeaderboardProps) {
   const [period, setPeriod] = useState<Period>('weekly');
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [data, setData] = useState<LeaderboardVolunteer[]>(initialData);
+  const router = useRouter();
+  const supabase = createClient();
+
+  async function handleVolunteerClick() {
+    const { data: {session} } = await supabase.auth.getSession();
+    if (session) {
+      router.push('/profile');
+    } else {
+      router.push('/auth');
+    }
+  }
   const [isPending, startTransition] = useTransition();
 
   const fetchLeaderboard = useCallback((p: Period, cId: string | null) => {
     startTransition(async () => {
       const params = new URLSearchParams({ period: p });
       if (cId) params.set('campaignId', cId);
-
       try {
         const res = await fetch(`/api/leaderboard?${params.toString()}`);
         if (res.ok) {
@@ -92,14 +91,13 @@ export function Leaderboard({ initialData, currentUserId, campaigns }: Leaderboa
     ? data.findIndex((v) => v.id === currentUserId) + 1
     : null;
   const isCurrentUserInTop = currentUserRank !== null && currentUserRank > 0 && currentUserRank <= 50;
-
   const pointsKey = period === 'alltime' ? 'total_points' : 'weekly_points';
 
   return (
     <div className="space-y-6">
+
       {/* Controls */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        {/* Period tabs */}
         <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-1">
           <button
             onClick={() => setPeriod('weekly')}
@@ -127,7 +125,6 @@ export function Leaderboard({ initialData, currentUserId, campaigns }: Leaderboa
           </button>
         </div>
 
-        {/* Campaign filter */}
         {campaigns.length > 0 && (
           <select
             value={selectedCampaignId ?? ''}
@@ -136,9 +133,7 @@ export function Leaderboard({ initialData, currentUserId, campaigns }: Leaderboa
           >
             <option value="">All campaigns</option>
             {campaigns.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         )}
@@ -170,6 +165,7 @@ export function Leaderboard({ initialData, currentUserId, campaigns }: Leaderboa
             return (
               <div
                 key={volunteer.id}
+                onClick = {handleVolunteerClick}
                 className={cn(
                   'group flex items-center gap-4 rounded-xl border px-4 py-3 transition-all hover:shadow-md hover:-translate-y-0.5',
                   isCurrentUser
@@ -179,26 +175,13 @@ export function Leaderboard({ initialData, currentUserId, campaigns }: Leaderboa
               >
                 {/* Rank */}
                 <div className="flex w-10 shrink-0 items-center justify-center">
-                  {rank <= 3 ? (
-                    <div className="flex flex-col items-center">
-                      <MedalIcon rank={rank} />
-                      <span className={cn('text-xs font-bold', getRankStyle(rank))}>
-                        #{rank}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className={cn('text-lg font-bold', getRankStyle(rank))}>
-                      {rank}
-                    </span>
-                  )}
+                  <span className={cn('text-lg font-bold', getRankStyle(rank))}>
+                    {rank}
+                  </span>
                 </div>
 
                 {/* Avatar */}
-                <Avatar
-                  src={volunteer.avatar_url}
-                  name={volunteer.name}
-                  size="md"
-                />
+                <Avatar src={volunteer.avatar_url} name={volunteer.name} size="md" />
 
                 {/* Name + Level */}
                 <div className="min-w-0 flex-1">
@@ -220,7 +203,7 @@ export function Leaderboard({ initialData, currentUserId, campaigns }: Leaderboa
                   </div>
                 </div>
 
-                {/* Points */}
+                {/* Lemons */}
                 <div className="text-right">
                   <div className={cn(
                     'text-lg font-bold tabular-nums',
@@ -228,7 +211,7 @@ export function Leaderboard({ initialData, currentUserId, campaigns }: Leaderboa
                   )}>
                     {volunteer[pointsKey].toLocaleString()}
                   </div>
-                  <div className="text-xs text-gray-500">pts</div>
+                  <div className="text-xs text-gray-500"> lemons picked</div>
                 </div>
 
                 {/* Streak */}
@@ -244,7 +227,7 @@ export function Leaderboard({ initialData, currentUserId, campaigns }: Leaderboa
         </div>
       </div>
 
-      {/* Pinned current user (if outside top 50) */}
+      {/* Pinned current user */}
       {currentUser && !isCurrentUserInTop && (
         <div className="sticky bottom-4">
           <div className="flex items-center gap-4 rounded-xl border-2 border-green-400 bg-green-50 px-4 py-3 shadow-lg">
@@ -253,11 +236,7 @@ export function Leaderboard({ initialData, currentUserId, campaigns }: Leaderboa
                 {currentUserRank ?? '—'}
               </span>
             </div>
-            <Avatar
-              src={currentUser.avatar_url}
-              name={currentUser.name}
-              size="md"
-            />
+            <Avatar src={currentUser.avatar_url} name={currentUser.name} size="md" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="truncate font-semibold text-green-800">
@@ -275,32 +254,27 @@ export function Leaderboard({ initialData, currentUserId, campaigns }: Leaderboa
               <div className="text-lg font-bold tabular-nums text-green-700">
                 {currentUser[pointsKey].toLocaleString()}
               </div>
-              <div className="text-xs text-green-600">pts</div>
+              <div className="text-xs text-green-600"> lemons picked</div>
             </div>
-            {currentUser.streak_days > 0 && (
-              <div className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-xs font-medium text-orange-600">
-                <Flame className="h-3.5 w-3.5" />
-                {currentUser.streak_days}d
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* Points legend */}
+      {/* How to earn lemons */}
       <div className="rounded-xl border border-gray-200 bg-white p-5">
-        <h3 className="mb-3 text-sm font-semibold text-gray-900">How to earn points</h3>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+        <h3 className="mb-3 text-sm font-semibold text-gray-900">How to provide lemons</h3>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
           {POINT_LABELS.map((item) => (
             <div key={item.type} className="flex items-center justify-between gap-2">
               <span className="text-sm text-gray-600">{item.label}</span>
               <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
-                {item.points}
+                +{item.points}
               </span>
             </div>
           ))}
         </div>
       </div>
+
     </div>
   );
 }

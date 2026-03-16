@@ -17,6 +17,14 @@ create table volunteers (
   created_at timestamptz default now()
 );
 
+-- Drafts for campaign creation (one per organizer, overwritten on each save)
+create table campaign_drafts (
+  id uuid primary key default gen_random_uuid(),
+  organizer_id uuid references volunteers(id) not null unique,
+  payload jsonb not null default '{}',
+  updated_at timestamptz default now()
+);
+
 -- Campaigns (flyering events)
 create table campaigns (
   id uuid primary key default gen_random_uuid(),

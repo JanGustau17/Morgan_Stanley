@@ -1,13 +1,13 @@
-import { redirect } from 'next/navigation';
-import { Shield } from 'lucide-react';
-import { auth } from '@/lib/auth';
-import { createServiceClient } from '@/lib/supabase/server';
-import { AdminDashboard } from '@/components/admin/AdminDashboard';
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/server";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
 
-export default async function AdminPage() {
+/** Overview page: access enforced by admin layout (role from volunteers table via NextAuth). */
+export default async function AdminOverviewPage() {
   const session = await auth();
   const role = (session?.user as Record<string, unknown> | undefined)?.role;
-  if (role !== 'admin') redirect('/');
+  if (role !== "admin") redirect("/");
 
   const supabase = createServiceClient();
 
@@ -18,6 +18,7 @@ export default async function AdminPage() {
     { count: volunteersCount },
     { data: conversionsWithGeo },
     { data: campaignsRaw },
+    { data: recentVolunteers },
   ] = await Promise.all([
     supabase
       .from('campaigns')
@@ -37,7 +38,7 @@ export default async function AdminPage() {
       .not('lat', 'is', null)
       .not('lng', 'is', null),
     supabase
-      .from('campaigns')
+      .from("campaigns")
       .select(`
         id,
         name,
@@ -48,7 +49,12 @@ export default async function AdminPage() {
         organizer_id,
         organizer:volunteers!campaigns_organizer_id_fkey(id, name, email, avatar_url)
       `)
-      .order('campaign_date', { ascending: false }),
+      .order("campaign_date", { ascending: false }),
+    supabase
+      .from("volunteers")
+      .select("id, name, email, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
   const totalFlyers = (flyersData ?? []).reduce(
@@ -112,24 +118,27 @@ export default async function AdminPage() {
     totalVolunteers: volunteersCount ?? 0,
   };
 
+  const recentSignups = (recentVolunteers ?? []).map((v) => ({
+    id: v.id,
+    name: v.name ?? v.email ?? "—",
+    email: v.email ?? "—",
+    created_at: v.created_at,
+  }));
+
   return (
-    <div>
-      <div className="mb-8 flex items-center gap-3">
-        <div className="rounded-lg bg-green-100 p-2">
-          <Shield className="h-6 w-6 text-green-600" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-sm text-gray-500">
-            Platform overview and campaign management
-          </p>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
+        <p className="text-sm text-gray-500">
+          Platform metrics and campaign management
+        </p>
       </div>
 
       <AdminDashboard
         metrics={metrics}
         campaigns={campaigns}
         conversions={conversions}
+        recentSignups={recentSignups}
       />
     </div>
   );
