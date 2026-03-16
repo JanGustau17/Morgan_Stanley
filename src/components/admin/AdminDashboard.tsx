@@ -41,10 +41,18 @@ interface CampaignRow {
   conversion_count: number;
 }
 
+interface RecentSignup {
+  id: string;
+  name: string;
+  email: string;
+  created_at: string;
+}
+
 interface AdminDashboardProps {
   metrics: Metrics;
   campaigns: CampaignRow[];
   conversions: { lat: number; lng: number }[];
+  recentSignups?: RecentSignup[];
 }
 
 type SortKey = 'name' | 'campaign_date' | 'volunteer_count' | 'conversion_count' | 'flyers_count';
@@ -73,6 +81,7 @@ export function AdminDashboard({
   metrics,
   campaigns,
   conversions,
+  recentSignups = [],
 }: AdminDashboardProps) {
   const [cityFilter, setCityFilter] = useState('');
   const [dateStart, setDateStart] = useState('');
@@ -191,6 +200,41 @@ export function AdminDashboard({
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* Recent signups + active today placeholder */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold text-gray-900">Recent signups</h2>
+          </CardHeader>
+          <CardContent>
+            {recentSignups.length === 0 ? (
+              <p className="text-sm text-gray-500">No recent signups</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {recentSignups.map((u) => (
+                  <li key={u.id} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="font-medium text-gray-900 min-w-0 truncate max-w-[140px]">{u.name}</span>
+                    <span className="text-gray-500 min-w-0 truncate max-w-[180px]">{u.email}</span>
+                    <span className="text-gray-400 shrink-0">{format(new Date(u.created_at), 'MMM d')}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold text-gray-900">Active today</h2>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-500">
+              Placeholder: connect to activity/logs when available.
+            </p>
+            <p className="mt-2 text-2xl font-bold text-gray-400">—</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* QR Scan Heatmap */}

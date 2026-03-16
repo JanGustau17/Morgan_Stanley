@@ -11,6 +11,7 @@ function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === "admin";
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -82,7 +83,7 @@ function Navbar() {
             </div>
 
             <Link href="/events/new" className={linkCls}>Create Event</Link>
-            <Link href="/admin" className={linkCls}>Admin</Link>
+            {isAdmin && <Link href="/admin" className={linkCls}>Admin</Link>}
           </div>
         </div>
 
@@ -137,7 +138,7 @@ function Navbar() {
             { href: "/events/new", label: "Create Event" },
             { href: "/leaderboard", label: "Leaderboard" },
             { href: "/profile", label: "My Profile" },
-            { href: "/admin", label: "Admin" },
+            ...(isAdmin ? [{ href: "/admin" as const, label: "Admin" as const }] : []),
           ].map((item) => (
             <Link
               key={item.href}
