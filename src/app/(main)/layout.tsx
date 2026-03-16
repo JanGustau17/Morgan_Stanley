@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { UserNav } from "@/components/auth/UserNav";
 import { ChatBot } from "@/components/chat/ChatBot";
+import { NotificationCenter } from "@/components/ui/NotificationCenter";
+import { MobileBottomNav } from "@/components/ui/MobileBottomNav";
 
 function Navbar() {
   const { data: session } = useSession();
@@ -66,13 +68,17 @@ function Navbar() {
                 </svg>
               </button>
               {communityOpen && (
-                <div className="absolute top-full left-0 mt-1.5 w-48 bg-white rounded-xl border border-[#e8e0cc] shadow-xl py-1.5 z-50">
+                <div className="absolute top-full left-0 mt-1.5 w-52 bg-white rounded-xl border border-[#e8e0cc] shadow-xl py-1.5 z-50">
+                  <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#101726]/40">
+                    Community
+                  </div>
                   {[
                     { href: "/#events", icon: "📅", label: "Events" },
                     { href: "/resources", icon: "🍎", label: "Food Resources" },
                     { href: "/forum", icon: "💬", label: "Forum" },
                     { href: "/leaderboard", icon: "🏆", label: "Leaderboard" },
                     { href: "/profile", icon: "👤", label: "My Profile" },
+                    { href: "/events/new", icon: "➕", label: "Create Event" },
                   ].map((item) => (
                     <Link
                       key={item.href}
@@ -84,6 +90,25 @@ function Navbar() {
                       {item.label}
                     </Link>
                   ))}
+                  <div className="border-t border-[#e8e0cc] mt-1 pt-1">
+                    <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#101726]/40">
+                      Organization
+                    </div>
+                    {[
+                      { href: "/donate", icon: "💛", label: "Donate" },
+                      { href: "/pantry/new", icon: "🏪", label: "List a Pantry" },
+                    ].map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setCommunityOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#101726] hover:bg-[#fff6E0] hover:text-[#5C3D8F] transition-colors"
+                      >
+                        <span className="text-base leading-none">{item.icon}</span>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -124,8 +149,9 @@ function Navbar() {
           />
         </Link>
 
-        {/* RIGHT: auth */}
+        {/* RIGHT: notifications + auth */}
         <div className="flex items-center gap-2">
+          {session?.user && <NotificationCenter />}
           {session?.user ? (
             <UserNav name={session.user.name} image={session.user.image} />
           ) : (
@@ -151,16 +177,15 @@ function Navbar() {
       {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden bg-[#ffcc10] border-t border-black/10 px-4 py-3 flex flex-col gap-0.5">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-[#101726]/40 px-3 pt-1 pb-0.5">Community</div>
           {[
-            { href: "/", label: "Home" },
-            { href: "/#events", label: "Events" },
-            { href: "/resources", label: "Food Resources" },
-            { href: "/events/new", label: "Create Event" },
-            { href: "/forum", label: "Forum" },
-            { href: "/leaderboard", label: "Leaderboard" },
-            { href: "/profile", label: "My Profile" },
-            // Admin only injected if role === "admin"
-            ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
+            { href: "/", label: "🏠 Home" },
+            { href: "/#events", label: "📅 Events" },
+            { href: "/resources", label: "🍎 Food Resources" },
+            { href: "/forum", label: "💬 Forum" },
+            { href: "/leaderboard", label: "🏆 Leaderboard" },
+            { href: "/profile", label: "👤 My Profile" },
+            { href: "/events/new", label: "➕ Create Event" },
           ].map((item) => (
             <Link
               key={item.href}
@@ -171,6 +196,23 @@ function Navbar() {
               {item.label}
             </Link>
           ))}
+          <div className="border-t border-black/10 mt-1 pt-2">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-[#101726]/40 px-3 pb-0.5">Organization</div>
+            {[
+              { href: "/donate", label: "💛 Donate" },
+              { href: "/pantry/new", label: "🏪 List a Pantry" },
+              ...(isAdmin ? [{ href: "/admin", label: "⚙️ Admin" }] : []),
+            ].map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className="text-sm font-semibold text-[#101726] py-2.5 px-3 rounded-lg hover:bg-black/8 transition-colors min-h-[44px] flex items-center"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
           <div className="flex gap-2 mt-3 pt-3 border-t border-black/10">
             {session?.user ? (
               <UserNav name={session.user.name} image={session.user.image} />
@@ -202,8 +244,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   return (
     <>
       <Navbar />
-      {/* pt-[60px] offsets the fixed navbar so content is never hidden behind it */}
-      <main className="pt-[60px]">{children}</main>
+      {/* pt-[60px] offsets the fixed navbar; pb-14 on mobile gives space for the bottom nav */}
+      <main className="pt-[60px] pb-14 md:pb-0">{children}</main>
+      <MobileBottomNav />
       <ChatBot />
     </>
   );
