@@ -51,7 +51,9 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const alreadyJoined = volunteerId ? volunteers.some((v) => v.id === volunteerId) : false;
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-  const eventUrl = `${baseUrl}/events/${id}`;
+  const eventUrl = volunteerId
+    ? `${baseUrl}/join/${id}?ref=${volunteerId}`
+    : `${baseUrl}/events/${id}`;
   const hasFlyer =
     campaign.lat != null && campaign.lng != null &&
     (campaign.lat !== 0 || campaign.lng !== 0) &&
