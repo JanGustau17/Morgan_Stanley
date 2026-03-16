@@ -536,6 +536,14 @@ export function ProfileHeader({
                       disabled={verifLoading || verifCode.length < 6}
                       className="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
                       style={{ background: '#15803d' }}
+                      aria-disabled={verifLoading || verifCode.length < 6}
+                      aria-label={
+                        verifCode.length < 6
+                          ? 'Enter all 6 digits to verify'
+                          : verifLoading
+                            ? 'Verifying code…'
+                            : 'Verify code'
+                      }
                     >
                       {verifLoading ? 'Verifying…' : 'Verify'}
                     </button>

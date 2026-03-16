@@ -38,13 +38,20 @@ export async function POST(req: Request) {
     });
 
     if (!authRes.ok) {
-      const errBody = await authRes.json().catch(() => ({})) as { error_description?: string; msg?: string };
-      const message = errBody.error_description ?? errBody.msg ?? 'Invalid email or password.';
+      const errBody = await authRes.json().catch(() => ({})) as Record<string, unknown>;
+      const message =
+        typeof errBody.error_description === 'string'
+          ? errBody.error_description
+          : typeof errBody.msg === 'string'
+            ? errBody.msg
+            : 'Invalid email or password.';
       return NextResponse.json({ error: message }, { status: 401 });
     }
 
-    const authData = await authRes.json() as { user?: { id: string; email?: string; user_metadata?: { full_name?: string } } };
-    const supabaseUser = authData.user;
+    const authData = await authRes.json().catch(() => null) as {
+      user?: { id: string; email?: string; user_metadata?: { full_name?: string } };
+    } | null;
+    const supabaseUser = authData?.user;
     if (!supabaseUser?.email) {
       return NextResponse.json({ error: 'Could not retrieve user data.' }, { status: 500 });
     }

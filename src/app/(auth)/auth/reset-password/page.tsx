@@ -24,14 +24,13 @@ export default function ResetPasswordPage() {
       (event) => {
         if (event === "PASSWORD_RECOVERY") {
           setStatus("ready");
-        } else if (event === "SIGNED_IN" && status === "loading") {
-          // Fallback: if already signed in from recovery link
-          setStatus("ready");
         }
       },
     );
 
-    // Safety timeout — if no event after 5 s, the token may be missing/expired
+    // Safety timeout — if no recovery event arrives within 5 s the token is
+    // missing or expired. We use the functional updater so the callback does
+    // not capture a stale `status` value in its closure.
     const timeout = setTimeout(() => {
       setStatus((prev) => (prev === "loading" ? "invalid" : prev));
     }, 5000);
@@ -40,7 +39,6 @@ export default function ResetPasswordPage() {
       subscription.unsubscribe();
       clearTimeout(timeout);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {

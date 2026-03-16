@@ -62,10 +62,12 @@ export default function SignupForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: email.trim(), password }),
         });
-        const sessionData = await sessionRes.json() as { token?: string; error?: string };
-        if (sessionData.token) {
-          await signIn("credentials", { token: sessionData.token, callbackUrl: "/" });
-          return;
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json().catch(() => null) as { token?: string } | null;
+          if (sessionData?.token) {
+            await signIn("credentials", { token: sessionData.token, callbackUrl: "/" });
+            return;
+          }
         }
       }
 

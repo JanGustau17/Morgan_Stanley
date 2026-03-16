@@ -26,10 +26,10 @@ export default function LoginForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim(), password }),
       });
-      const data = await res.json() as { token?: string; error?: string };
+      const data = await res.json().catch(() => null) as { token?: string; error?: string } | null;
 
-      if (!res.ok || !data.token) {
-        setErrorMsg(data.error ?? "Invalid email or password.");
+      if (!res.ok || !data?.token) {
+        setErrorMsg(data?.error ?? "Invalid email or password.");
         return;
       }
 
