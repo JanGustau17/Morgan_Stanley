@@ -29,6 +29,12 @@ export const metadata: Metadata = {
   manifest: '/site.webmanifest',
 };
 
+export const metadata = {
+  icons: {
+    icon: "/favicon.png",
+  },
+};
+
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
