@@ -68,6 +68,7 @@ function Navbar() {
                 <div className="absolute top-full left-0 mt-1.5 w-48 bg-white rounded-xl border border-[#e8e0cc] shadow-xl py-1.5 z-50">
                   {[
                     { href: "/#events", icon: "📅", label: "Events" },
+                    { href: "/forum", icon: "💬", label: "Forum" },
                     { href: "/leaderboard", icon: "🏆", label: "Leaderboard" },
                     { href: "/profile", icon: "👤", label: "My Profile" },
                   ].map((item) => (
@@ -86,6 +87,8 @@ function Navbar() {
             </div>
 
             <Link href="/events/new" className={linkCls}>Create Event</Link>
+
+            <Link href="/forum" className={linkCls}>Forum</Link>
 
             {/* Admin — only rendered when role === "admin" in session */}
             {isAdmin && (
@@ -148,6 +151,7 @@ function Navbar() {
             { href: "/", label: "Home" },
             { href: "/#events", label: "Events" },
             { href: "/events/new", label: "Create Event" },
+            { href: "/forum", label: "Forum" },
             { href: "/leaderboard", label: "Leaderboard" },
             { href: "/profile", label: "My Profile" },
             // Admin only injected if role === "admin"
