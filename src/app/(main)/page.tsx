@@ -533,7 +533,7 @@ function DonateSection() {
       icon: "💛",
       title: "Donate",
       desc: "$1 can unlock $8 in free groceries.",
-      href: "/donate",
+      href: "https://www.foodhelpline.org/donate",
       primary: true,
     },
     {
@@ -545,16 +545,16 @@ function DonateSection() {
     },
     {
       icon: "📢",
-      title: "Spread the Word",
-      desc: "You never know who needs the help.",
-      href: "/share",
+      title: "Forum",
+      desc: "Chat with other volunteers and share ideas.",
+      href: "/forum",
       primary: false,
     },
     {
       icon: "📋",
       title: "List Your Pantry",
       desc: "Run a food pantry? Add your organization.",
-      href: "/claim",
+      href: "https://www.foodhelpline.org/claim",
       primary: false,
     },
   ];
@@ -710,6 +710,7 @@ function Footer() {
             <div className="flex flex-col gap-2.5">
               {[
                 { href: "/events", label: "Events" },
+                { href: "/forum", label: "Forum" },
                 { href: "/leaderboard", label: "Leaderboard" },
                 { href: "/profile", label: "My Profile" },
                 { href: "/events/new", label: "Create Event" },
@@ -731,11 +732,10 @@ function Footer() {
             </div>
             <div className="flex flex-col gap-2.5">
               {[
-                { href: "/donate", label: "Donate" },
-                { href: "/volunteer", label: "Volunteer" },
-                { href: "/claim", label: "List a Pantry" },
-                { href: "/terms", label: "Terms of Service" },
-                { href: "/privacy", label: "Privacy Policy" },
+                { href: "https://www.foodhelpline.org/donate", label: "Donate" },
+                { href: "/#events", label: "Volunteer" },
+                { href: "https://www.foodhelpline.org/claim", label: "List a Pantry" },
+                { href: "/forum", label: "Forum" },
               ].map((l) => (
                 <Link
                   key={l.href}
