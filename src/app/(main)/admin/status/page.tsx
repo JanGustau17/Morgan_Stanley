@@ -2,8 +2,8 @@
  * Admin system status: Supabase, Twilio, Vercel, env readiness.
  * TODO: Add real health checks (ping Supabase, Twilio status API, Vercel deployment API).
  */
-import { Card, CardHeader, CardContent } from "@/components/ui/Card";
-import { Server, CheckCircle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/Card";
+import { CheckCircle } from "lucide-react";
 
 const STATUS_ITEMS = [
   { id: "supabase", label: "Supabase", status: "OK", note: "TODO: ping health endpoint" },

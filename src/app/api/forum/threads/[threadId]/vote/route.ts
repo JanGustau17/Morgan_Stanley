@@ -31,18 +31,15 @@ export async function POST(
   if (existing) {
     // Remove vote
     await supabase.from("forum_votes").delete().eq("id", existing.id);
-    // Decrement upvotes
-    const { data: thread } = await supabase
+    // Decrement upvotes atomically using count of remaining votes
+    const { count } = await supabase
+      .from("forum_votes")
+      .select("*", { count: "exact", head: true })
+      .eq("thread_id", threadId);
+    await supabase
       .from("forum_threads")
-      .select("upvotes")
-      .eq("id", threadId)
-      .single();
-    if (thread) {
-      await supabase
-        .from("forum_threads")
-        .update({ upvotes: Math.max(0, (thread.upvotes ?? 0) - 1) })
-        .eq("id", threadId);
-    }
+      .update({ upvotes: count ?? 0 })
+      .eq("id", threadId);
     return NextResponse.json({ voted: false });
   }
 
@@ -52,18 +49,15 @@ export async function POST(
     thread_id: threadId,
     value: 1,
   });
-  // Increment upvotes
-  const { data: thread } = await supabase
+  // Update upvotes atomically using count of all votes
+  const { count } = await supabase
+    .from("forum_votes")
+    .select("*", { count: "exact", head: true })
+    .eq("thread_id", threadId);
+  await supabase
     .from("forum_threads")
-    .select("upvotes")
-    .eq("id", threadId)
-    .single();
-  if (thread) {
-    await supabase
-      .from("forum_threads")
-      .update({ upvotes: (thread.upvotes ?? 0) + 1 })
-      .eq("id", threadId);
-  }
+    .update({ upvotes: count ?? 0 })
+    .eq("id", threadId);
 
   return NextResponse.json({ voted: true });
 }

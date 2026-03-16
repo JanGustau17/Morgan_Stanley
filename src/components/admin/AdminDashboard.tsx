@@ -60,6 +60,15 @@ type SortDir = 'asc' | 'desc';
 
 const statusOptions = ['all', 'active', 'upcoming', 'completed'] as const;
 
+function SortIcon({ column, sortKey, sortDir }: { column: SortKey; sortKey: SortKey; sortDir: SortDir }) {
+  if (sortKey !== column) return null;
+  return sortDir === 'asc' ? (
+    <ChevronUp className="inline h-3.5 w-3.5" />
+  ) : (
+    <ChevronDown className="inline h-3.5 w-3.5" />
+  );
+}
+
 const METRIC_CARDS: {
   key: keyof Metrics;
   label: string;
@@ -159,15 +168,6 @@ export function AdminDashboard({
       setSortKey(key);
       setSortDir('desc');
     }
-  }
-
-  function SortIcon({ column }: { column: SortKey }) {
-    if (sortKey !== column) return null;
-    return sortDir === 'asc' ? (
-      <ChevronUp className="inline h-3.5 w-3.5" />
-    ) : (
-      <ChevronDown className="inline h-3.5 w-3.5" />
-    );
   }
 
   const mapCenter = useMemo(() => {
@@ -319,7 +319,7 @@ export function AdminDashboard({
                   className="cursor-pointer px-6 py-3 font-medium text-gray-600 hover:text-gray-900"
                   onClick={() => toggleSort('name')}
                 >
-                  Name <SortIcon column="name" />
+                  Name <SortIcon column="name" sortKey={sortKey} sortDir={sortDir} />
                 </th>
                 <th className="px-6 py-3 font-medium text-gray-600">
                   Organizer
@@ -328,25 +328,25 @@ export function AdminDashboard({
                   className="cursor-pointer px-6 py-3 font-medium text-gray-600 hover:text-gray-900"
                   onClick={() => toggleSort('campaign_date')}
                 >
-                  Date <SortIcon column="campaign_date" />
+                  Date <SortIcon column="campaign_date" sortKey={sortKey} sortDir={sortDir} />
                 </th>
                 <th
                   className="cursor-pointer px-6 py-3 font-medium text-gray-600 hover:text-gray-900 text-right"
                   onClick={() => toggleSort('volunteer_count')}
                 >
-                  Volunteers <SortIcon column="volunteer_count" />
+                  Volunteers <SortIcon column="volunteer_count" sortKey={sortKey} sortDir={sortDir} />
                 </th>
                 <th
                   className="cursor-pointer px-6 py-3 font-medium text-gray-600 hover:text-gray-900 text-right"
                   onClick={() => toggleSort('conversion_count')}
                 >
-                  QR Scans <SortIcon column="conversion_count" />
+                  QR Scans <SortIcon column="conversion_count" sortKey={sortKey} sortDir={sortDir} />
                 </th>
                 <th
                   className="cursor-pointer px-6 py-3 font-medium text-gray-600 hover:text-gray-900 text-right"
                   onClick={() => toggleSort('flyers_count')}
                 >
-                  Flyers <SortIcon column="flyers_count" />
+                  Flyers <SortIcon column="flyers_count" sortKey={sortKey} sortDir={sortDir} />
                 </th>
                 <th className="px-6 py-3 font-medium text-gray-600">
                   Status

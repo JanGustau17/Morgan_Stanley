@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const volunteerId = (session.user as any).volunteerId as string;
+    const volunteerId = (session.user as { volunteerId?: string }).volunteerId;
     if (!volunteerId) {
       return NextResponse.json(
         { error: 'Volunteer profile not found' },
@@ -126,9 +126,9 @@ export async function GET() {
       );
     }
 
-    const result = campaigns.map((c: any) => ({
+    const result = campaigns.map((c: Record<string, unknown>) => ({
       ...c,
-      volunteer_count: c.campaign_volunteers?.[0]?.count ?? 0,
+      volunteer_count: (c.campaign_volunteers as { count: number }[] | undefined)?.[0]?.count ?? 0,
       campaign_volunteers: undefined,
     }));
 

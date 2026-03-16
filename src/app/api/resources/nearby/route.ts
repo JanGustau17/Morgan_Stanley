@@ -1,5 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { fetchNearbyResources } from '@/lib/lemontree';
 
+/**
+ * GET /api/resources/nearby?lat=&lng=&take=&resourceTypeId=
+ *
+ * Fetch nearby food resources sorted by distance.
+ * Uses the shared Lemontree client with proper superjson deserialization.
+ */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const lat = searchParams.get('lat');
@@ -9,30 +16,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'lat and lng are required' }, { status: 400 });
   }
 
-  const url = new URL('https://platform.foodhelpline.org/api/resources');
-  url.searchParams.set('lat', lat);
-  url.searchParams.set('lng', lng);
-  url.searchParams.set('take', '12');
-  url.searchParams.set('sort', 'distance');
+  const take = Number(searchParams.get('take') || '12');
 
-  const res = await fetch(url.toString(), { cache: 'no-store' });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    console.error('[resources/nearby] upstream error', res.status, body);
-    return NextResponse.json({ error: 'Failed to fetch nearby resources', upstream: res.status }, { status: 502 });
-  }
-
-  const raw = await res.json();
-  // Lemontree API uses superjson: actual data lives at raw.json
-  const data: { count?: number; resources?: unknown[] } = raw?.json ?? raw;
-
-  console.log('[resources/nearby] count:', data?.count, 'resources:', data?.resources?.length);
-
-  if (!Array.isArray(data?.resources)) {
-    console.error('[resources/nearby] unexpected shape:', JSON.stringify(raw).slice(0, 300));
+  try {
+    const data = await fetchNearbyResources(Number(lat), Number(lng), take);
+    return NextResponse.json(data);
+  } catch (err: unknown) {
+    console.error('[resources/nearby] error:', err);
     return NextResponse.json({ resources: [], count: 0 });
   }
-
-  return NextResponse.json(data);
 }

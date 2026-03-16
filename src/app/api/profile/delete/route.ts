@@ -19,6 +19,9 @@ export async function DELETE() {
 
     // Delete related data first (respects FK constraints)
     await Promise.all([
+      supabase.from('forum_votes').delete().eq('volunteer_id', volunteerId),
+      supabase.from('forum_replies').delete().eq('author_id', volunteerId),
+      supabase.from('forum_threads').delete().eq('author_id', volunteerId),
       supabase.from('point_events').delete().eq('volunteer_id', volunteerId),
       supabase.from('badges').delete().eq('volunteer_id', volunteerId),
       supabase.from('campaign_volunteers').delete().eq('volunteer_id', volunteerId),

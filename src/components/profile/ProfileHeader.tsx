@@ -84,7 +84,7 @@ type Props = {
 };
 
 export function ProfileHeader({
-  volunteerId, name, email, phone, avatarUrl, level,
+  volunteerId: _volunteerId, name, email, phone, avatarUrl, level,
   savedBannerId, savedBannerImage, savedGreetingId,
   greeting, impactLine,
 }: Props) {
