@@ -32,10 +32,10 @@ function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#ffcc10] shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 h-[60px] flex items-center justify-between gap-3">
+      <div className="max-w-7xl mx-auto px-3 md:px-4 h-[60px] flex items-center justify-between gap-2 relative">
 
         {/* LEFT: hamburger (mobile) + nav links (desktop) */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 min-w-0 shrink-0">
           <button
             className="md:hidden p-2 -ml-1 rounded-lg text-[#101726]"
             onClick={() => setMobileOpen((v) => !v)}
@@ -126,13 +126,13 @@ function Navbar() {
           </div>
         </div>
 
-        {/* CENTER: orange lemon icon + wordmark (matches landing page design) */}
-        <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5 shrink-0">
+        {/* CENTER: orange lemon icon + wordmark — grows to fill middle space on mobile */}
+        <Link href="/" className="flex items-center gap-2 shrink-0 mx-auto md:absolute md:left-1/2 md:-translate-x-1/2 md:mx-0">
           <div
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+            className="w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center shrink-0"
             style={{ background: "#E8522A" }}
           >
-            <svg viewBox="0 0 100 100" width="22" height="22" fill="none">
+            <svg viewBox="0 0 100 100" width="20" height="20" fill="none">
               <ellipse cx="50" cy="54" rx="28" ry="24" fill="#ffcc10" />
               <ellipse cx="76" cy="50" rx="7" ry="5" fill="#ffcc10" transform="rotate(-20 76 50)" />
               <ellipse cx="24" cy="58" rx="7" ry="5" fill="#ffcc10" transform="rotate(20 24 58)" />
@@ -144,13 +144,13 @@ function Navbar() {
           <img
             src="/reach-wordmark.png"
             alt="lemontree"
-            className="h-6 w-auto"
+            className="h-5 md:h-6 w-auto"
             style={{ filter: "brightness(0)" }}
           />
         </Link>
 
         {/* RIGHT: notifications + auth */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
           {session?.user && <NotificationCenter />}
           {session?.user ? (
             <UserNav name={session.user.name} image={session.user.image} />

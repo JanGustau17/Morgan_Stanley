@@ -26,6 +26,86 @@ interface Resource {
   usageLimitCount: number | null;
 }
 
+// ─── Flyer Translations ───────────────────────────────────────────────────────
+
+interface FlyerStrings {
+  headline: (locationName: string) => string;
+  freeMeals: string;
+  freeGroceries: string;
+  requirements: (count: number) => string;
+  scanCta: string;
+  dateNote: (date: string) => string;
+  website: string;
+  dir: 'ltr' | 'rtl';
+}
+
+const FLYER_STRINGS: Record<string, FlyerStrings> = {
+  en: {
+    headline: (l) => `Free Food Near ${l || 'Your Location'}`,
+    freeMeals: 'Free Meals:',
+    freeGroceries: 'Free Groceries:',
+    requirements: (n) => `${n} requirement${n !== 1 ? 's' : ''} appl${n !== 1 ? 'y' : 'ies'}`,
+    scanCta: 'Scan to view full details about each resource, including reviews and wait times!',
+    dateNote: (d) => `This flyer was generated on ${d}. Free food resources change schedules & requirements often. For up-to-date information & more food access tools, visit:`,
+    website: 'foodhelpline.org',
+    dir: 'ltr',
+  },
+  es: {
+    headline: (l) => `Comida Gratis Cerca de ${l || 'Tu Ubicación'}`,
+    freeMeals: 'Comidas Gratis:',
+    freeGroceries: 'Víveres Gratis:',
+    requirements: (n) => `${n} requisito${n !== 1 ? 's' : ''} aplica${n !== 1 ? 'n' : ''}`,
+    scanCta: '¡Escanea para ver detalles completos de cada recurso, incluyendo reseñas y tiempos de espera!',
+    dateNote: (d) => `Este volante fue generado el ${d}. Los recursos de comida gratuita cambian horarios y requisitos con frecuencia. Para información actualizada y más herramientas de acceso a alimentos, visita:`,
+    website: 'foodhelpline.org',
+    dir: 'ltr',
+  },
+  zh: {
+    headline: (l) => `${l || '您附近'}的免费食物`,
+    freeMeals: '免费餐食：',
+    freeGroceries: '免费食品：',
+    requirements: (n) => `${n} 项要求`,
+    scanCta: '扫描查看每个资源的完整详情，包括评价和等待时间！',
+    dateNote: (d) => `本传单生成于 ${d}。免费食物资源的时间表和要求经常变化。如需最新信息及更多食物获取工具，请访问：`,
+    website: 'foodhelpline.org',
+    dir: 'ltr',
+  },
+  ar: {
+    headline: (l) => `طعام مجاني بالقرب من ${l || 'موقعك'}`,
+    freeMeals: 'وجبات مجانية:',
+    freeGroceries: 'بقالة مجانية:',
+    requirements: (n) => `${n} شرط مطلوب`,
+    scanCta: 'امسح الرمز لعرض التفاصيل الكاملة لكل مورد، بما في ذلك التقييمات وأوقات الانتظار!',
+    dateNote: (d) => `تم إنشاء هذه النشرة في ${d}. تتغير جداول وشروط موارد الغذاء المجاني كثيراً. للحصول على معلومات محدّثة وأدوات الوصول للغذاء، تفضل بزيارة:`,
+    website: 'foodhelpline.org',
+    dir: 'rtl',
+  },
+  fr: {
+    headline: (l) => `Nourriture Gratuite Près de ${l || 'Votre Lieu'}`,
+    freeMeals: 'Repas Gratuits :',
+    freeGroceries: 'Épicerie Gratuite :',
+    requirements: (n) => `${n} condition${n !== 1 ? 's' : ''} requise${n !== 1 ? 's' : ''}`,
+    scanCta: 'Scannez pour voir les détails complets de chaque ressource, y compris les avis et les temps d\'attente !',
+    dateNote: (d) => `Ce flyer a été généré le ${d}. Les ressources alimentaires gratuites changent souvent d'horaires et de conditions. Pour des informations à jour et plus d'outils d'accès alimentaire, visitez :`,
+    website: 'foodhelpline.org',
+    dir: 'ltr',
+  },
+  ht: {
+    headline: (l) => `Manje Gratis Tou Pre ${l || 'Kote Ou Ye a'}`,
+    freeMeals: 'Repa Gratis:',
+    freeGroceries: 'Pwovizyon Gratis:',
+    requirements: (n) => `${n} kondisyon aplike`,
+    scanCta: 'Eskane pou wè tout detay sou chak resous, ki gen ladan revizyon ak tan datant!',
+    dateNote: (d) => `Folye sa a te jenere nan dat ${d}. Resous manje gratis chanje orè ak kondisyon yo souvan. Pou enfòmasyon ajou ak plis zouti aksè manje, vizite:`,
+    website: 'foodhelpline.org',
+    dir: 'ltr',
+  },
+};
+
+function getFlyerStrings(lang: string): FlyerStrings {
+  return FLYER_STRINGS[lang] ?? FLYER_STRINGS.en;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const DAY_NAMES: Record<string, string> = {
@@ -85,14 +165,17 @@ interface FlyerMockupProps {
   resources: (Resource | null)[];
   date: string;
   qrDataUrl: string | null;
+  lang?: string;
 }
 
-export function FlyerMockup({ locationName, resources, date, qrDataUrl }: FlyerMockupProps) {
+export function FlyerMockup({ locationName, resources, date, qrDataUrl, lang = 'en' }: FlyerMockupProps) {
   const slots = [...resources, null, null, null, null].slice(0, 4);
+  const t = getFlyerStrings(lang);
 
   return (
     <div
       id={FLYER_PRINT_ID}
+      dir={t.dir}
       style={{
         background: '#ffffff',
         border: '1px solid #e5e7eb',
@@ -108,7 +191,7 @@ export function FlyerMockup({ locationName, resources, date, qrDataUrl }: FlyerM
           lemontree
         </div>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginTop: 7 }}>
-          Free Food Near {locationName || 'Your Location'}
+          {t.headline(locationName)}
         </div>
       </div>
 
@@ -135,11 +218,11 @@ export function FlyerMockup({ locationName, resources, date, qrDataUrl }: FlyerM
                 )}
                 {r.usageLimitCount != null && (
                   <div style={{ fontSize: 11, color: '#6b7280' }}>
-                    {r.usageLimitCount} requirement{r.usageLimitCount !== 1 ? 's' : ''} appl{r.usageLimitCount !== 1 ? 'y' : 'ies'}
+                    {t.requirements(r.usageLimitCount)}
                   </div>
                 )}
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', marginTop: 8, marginBottom: 3 }}>
-                  {r.resourceType.id === 'SOUP_KITCHEN' ? 'Free Meals:' : 'Free Groceries:'}
+                  {r.resourceType.id === 'SOUP_KITCHEN' ? t.freeMeals : t.freeGroceries}
                 </div>
                 {getScheduleLines(r.shifts).map((line, j) => (
                   <div key={j} style={{ fontSize: 11, color: '#374151', lineHeight: 1.5, whiteSpace: 'pre-line', marginBottom: 1 }}>
@@ -165,14 +248,13 @@ export function FlyerMockup({ locationName, resources, date, qrDataUrl }: FlyerM
         </div>
         <div style={{ fontSize: 11, color: '#6b7280', lineHeight: 1.65, paddingTop: 2 }}>
           <div style={{ color: '#111827', fontWeight: 500 }}>
-            Scan to view full details about each resource, including reviews and wait times!
+            {t.scanCta}
           </div>
           <div style={{ marginTop: 6 }}>
-            This flyer was generated on <span style={{ textDecoration: 'underline' }}>{date}</span>. Free food
-            resources change schedules &amp; requirements often. For up-to-date information &amp; more food access tools, visit:
+            {t.dateNote(date)}
           </div>
           <div style={{ color: '#16a34a', fontWeight: 700, fontSize: 12, marginTop: 5 }}>
-            foodhelpline.org
+            {t.website}
           </div>
         </div>
       </div>
@@ -337,7 +419,7 @@ interface FlyerStepProps {
   campaignId?: string;
 }
 
-export function FlyerStep({ lat, lng, locationName, lang: _lang, volunteerId, campaignId }: FlyerStepProps) {
+export function FlyerStep({ lat, lng, locationName, lang, volunteerId, campaignId }: FlyerStepProps) {
   const [allResources, setAllResources] = useState<Resource[]>([]);
   const [selected, setSelected] = useState<(Resource | null)[]>([null, null, null, null]);
   const [loading, setLoading] = useState(true);
@@ -423,7 +505,7 @@ export function FlyerStep({ lat, lng, locationName, lang: _lang, volunteerId, ca
 
       {/* ── Left: flyer preview ── */}
       <div className="flex-1 min-w-0">
-        <FlyerMockup locationName={locationName} resources={selected} date={today} qrDataUrl={qrDataUrl} />
+        <FlyerMockup locationName={locationName} resources={selected} date={today} qrDataUrl={qrDataUrl} lang={lang} />
       </div>
 
       {/* ── Right: customize + download, stretches to match flyer height ── */}

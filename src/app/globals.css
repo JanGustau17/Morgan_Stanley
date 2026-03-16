@@ -85,6 +85,18 @@ body {
   overflow-x: hidden;
 }
 
+/* Safe word wrapping for long text on mobile */
+p, h1, h2, h3, h4, h5, h6, span, a, li, td, th {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Ensure Tailwind flex children don't overflow their container on narrow screens.
+   Targets elements using Tailwind's `flex` utility class (display: flex). */
+.flex > * {
+  min-width: 0;
+}
+
 /* Ensure all interactive elements meet 44px min touch target */
 @media (pointer: coarse) {
   a, button, input, select, textarea {
