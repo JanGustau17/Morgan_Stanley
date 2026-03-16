@@ -464,7 +464,6 @@ function HowItWorksSection() {
   );
 }
 
-// ─── CHANGED: trimmed to 2 cards only (Donate + Volunteer → /auth) ────────────
 function DonateSection() {
   const cards = [
     {
@@ -479,7 +478,7 @@ function DonateSection() {
       icon: "🙌",
       title: "Volunteer",
       desc: "Sign up, join an event, and help spread the word in your neighborhood. Every action counts.",
-      href: "/auth",  // points to Get Started / sign-up flow
+      href: "/auth",
       cta: "Get started →",
       primary: false,
     },
@@ -506,7 +505,6 @@ function DonateSection() {
           </p>
         </div>
 
-        {/* Two cards, centered, larger since there are only two */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
           {cards.map((card) => (
             <Link
@@ -614,11 +612,19 @@ function Footer() {
       <div className="max-w-6xl mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-10 border-b border-white/10">
           <div className="md:col-span-2">
-            <img
-              src="https://www.foodhelpline.org/_next/static/media/wordmark.483cff36.svg"
-              alt="Lemontree"
-              className="h-6 w-auto mb-3 brightness-0 invert"
-            />
+            {/* Lemontree REACH logo in footer — icon + wordmark from /public */}
+            <div className="flex items-center gap-2 mb-3">
+              <img
+                src="/reach-icon.png"
+                alt=""
+                className="h-8 w-8 object-contain rounded-lg"
+              />
+              <img
+                src="/reach-wordmark.png"
+                alt="lemontree REACH"
+                className="h-6 w-auto object-contain brightness-0 invert"
+              />
+            </div>
             <p className="text-white/40 text-sm leading-relaxed max-w-xs">
               Making free food accessible to every neighbor.
               Lemontree Foods, Inc. is a registered 501(c)(3) nonprofit.
@@ -632,7 +638,6 @@ function Footer() {
             </div>
             <div className="flex flex-col gap-2.5">
               {[
-                // CHANGED: Events → scrolls to #events on homepage
                 { href: "/#events", label: "Events" },
                 { href: "/leaderboard", label: "Leaderboard" },
                 { href: "/profile", label: "My Profile" },
@@ -656,7 +661,6 @@ function Footer() {
             <div className="flex flex-col gap-2.5">
               {[
                 { href: "/donate", label: "Donate" },
-                // CHANGED: Volunteer → /auth (Get Started flow)
                 { href: "/auth", label: "Volunteer" },
                 { href: "/terms", label: "Terms of Service" },
                 { href: "/privacy", label: "Privacy Policy" },

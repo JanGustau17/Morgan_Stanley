@@ -13,36 +13,28 @@ function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
   const supabase = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-  // ─── Fetch role from public.volunteers table ──────────────────────────────
-  // Runs whenever the session changes (login / logout).
-  // Looks up the current user's email in the volunteers table and checks
-  // if their role === "admin". Hides the Admin nav link for everyone else.
   useEffect(() => {
     async function checkAdminRole() {
       if (!session?.user?.email) {
         setIsAdmin(false);
         return;
       }
-
       const { data, error } = await supabase
         .from("volunteers")
         .select("role")
         .eq("email", session.user.email)
         .single();
-
       if (error) {
         console.error("Role check error:", error.message);
         setIsAdmin(false);
         return;
       }
-
       setIsAdmin(data?.role === "admin");
     }
-
     checkAdminRole();
   }, [session?.user?.email]);
 
@@ -81,7 +73,6 @@ function Navbar() {
           <div className="hidden md:flex items-center gap-0.5">
             <Link href="/" className={linkCls}>Home</Link>
 
-            {/* Community dropdown */}
             <div className="relative" ref={dropRef}>
               <button
                 onClick={() => setCommunityOpen((v) => !v)}
@@ -118,33 +109,23 @@ function Navbar() {
 
             <Link href="/events/new" className={linkCls}>Create Event</Link>
 
-            {/* Admin — only rendered when role === "admin" in Supabase */}
             {isAdmin && (
               <Link href="/admin" className={linkCls}>Admin</Link>
             )}
           </div>
         </div>
 
-        {/* CENTER: orange lemon icon + wordmark */}
-        <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5 shrink-0">
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: "#E8522A" }}
-          >
-            <svg viewBox="0 0 100 100" width="22" height="22" fill="none">
-              <ellipse cx="50" cy="54" rx="28" ry="24" fill="#ffcc10" />
-              <ellipse cx="76" cy="50" rx="7" ry="5" fill="#ffcc10" transform="rotate(-20 76 50)" />
-              <ellipse cx="24" cy="58" rx="7" ry="5" fill="#ffcc10" transform="rotate(20 24 58)" />
-              <ellipse cx="50" cy="28" rx="10" ry="7" fill="#008A81" transform="rotate(-15 50 28)" />
-              <circle cx="46" cy="56" r="2" fill="#E8522A" opacity="0.5" />
-              <circle cx="53" cy="60" r="2" fill="#E8522A" opacity="0.5" />
-            </svg>
-          </div>
+        {/* CENTER: Lemontree REACH logo — reach-icon.png + reach-wordmark.png from /public */}
+        <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2 shrink-0">
           <img
-            src="https://www.foodhelpline.org/_next/static/media/wordmark.483cff36.svg"
-            alt="lemontree"
-            className="h-6 w-auto"
-            style={{ filter: "brightness(0)" }}
+            src="/reach-icon.png"
+            alt=""
+            className="h-9 w-9 object-contain rounded-lg"
+          />
+          <img
+            src="/reach-wordmark.png"
+            alt="lemontree REACH"
+            className="h-7 w-auto object-contain"
           />
         </Link>
 
@@ -181,7 +162,6 @@ function Navbar() {
             { href: "/events/new", label: "Create Event" },
             { href: "/leaderboard", label: "Leaderboard" },
             { href: "/profile", label: "My Profile" },
-            // Admin only injected if role === "admin"
             ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
           ].map((item) => (
             <Link
