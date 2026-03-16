@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ChatMessage } from "./ChatMessage";
-import type { Message, Volunteer } from "@/lib/types";
+import type { Message, MessageSender } from "@/lib/types";
 import { Send } from "lucide-react";
 
 interface ChatWindowProps {
@@ -63,7 +63,7 @@ export function ChatWindow({
             if (prev.some((m) => m.id === incoming.id)) return prev;
             return [
               ...prev,
-              { ...incoming, sender: (sender as Volunteer) ?? undefined },
+              { ...incoming, sender: (sender as MessageSender) ?? undefined },
             ];
           });
         },
@@ -98,18 +98,6 @@ export function ChatWindow({
         id: currentUserId,
         name: currentUserName,
         avatar_url: currentUserAvatar,
-        email: null,
-        phone: null,
-        phone_verified: false,
-        sms_opt_in: false,
-        city: null,
-        total_points: 0,
-        weekly_points: 0,
-        level: 0,
-        streak_days: 0,
-        last_active: null,
-        role: "volunteer",
-        created_at: new Date().toISOString(),
       },
     };
 
