@@ -1,8 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, MapPin, Camera, ShieldCheck, Eye, Send, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Check, MapPin, ShieldCheck, Eye, Send, ChevronRight, ChevronLeft, X, Upload } from 'lucide-react';
+
+const LocationPicker = dynamic(() => import('@/components/map/LocationPicker'), { ssr: false });
 
 const STEPS = [
   { id: 1, label: 'Basic Info', icon: '📋' },
@@ -26,14 +29,17 @@ type FormData = {
   city: string;
   state: string;
   zip: string;
+  lat: number;
+  lng: number;
   hours: Record<string, string>;
   serves: string;
   requirements: string;
   dietary: string[];
+  appointmentType: 'walk-in' | 'appointment' | 'both';
   contactName: string;
   contactEmail: string;
   contactPhone: string;
-  photos: string[];
+  photos: { name: string; url: string }[];
   orgName: string;
   orgWebsite: string;
   agreeTerms: boolean;
@@ -47,10 +53,13 @@ const INITIAL: FormData = {
   city: '',
   state: '',
   zip: '',
+  lat: 0,
+  lng: 0,
   hours: {},
   serves: '',
   requirements: '',
   dietary: [],
+  appointmentType: 'walk-in',
   contactName: '',
   contactEmail: '',
   contactPhone: '',
@@ -120,10 +129,16 @@ export default function ListPantryPage() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormData>(INITIAL);
   const [submitted, setSubmitted] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function update(field: keyof FormData, value: unknown) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
+
+  const handleLocationChange = useCallback((lat: number, lng: number) => {
+    setForm((prev) => ({ ...prev, lat, lng }));
+  }, []);
 
   function toggleDietary(tag: string) {
     setForm((prev) => ({
@@ -144,6 +159,42 @@ export default function ListPantryPage() {
       }
       return { ...prev, hours };
     });
+  }
+
+  function handlePhotoFiles(files: FileList | null) {
+    if (!files) return;
+    const newPhotos = Array.from(files).map((file) => ({
+      name: file.name,
+      url: URL.createObjectURL(file),
+    }));
+    setForm((prev) => ({ ...prev, photos: [...prev.photos, ...newPhotos] }));
+  }
+
+  function removePhoto(index: number) {
+    setForm((prev) => {
+      // Revoke the object URL to avoid memory leaks
+      URL.revokeObjectURL(prev.photos[index].url);
+      return { ...prev, photos: prev.photos.filter((_, i) => i !== index) };
+    });
+  }
+
+  // Revoke all object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      form.photos.forEach((p) => URL.revokeObjectURL(p.url));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const locationQuery = useMemo(
+    () => [form.address, form.city, form.state, form.zip].filter(Boolean).join(', '),
+    [form.address, form.city, form.state, form.zip],
+  );
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragActive(false);
+    handlePhotoFiles(e.dataTransfer.files);
   }
 
   function next() { setStep((s) => Math.min(s + 1, STEPS.length)); }
@@ -340,11 +391,19 @@ export default function ListPantryPage() {
                     className="w-full px-4 py-2.5 rounded-xl border border-[#e8e0cc] text-sm focus:outline-none focus:ring-2 focus:ring-[#5C3D8F]/25 focus:border-[#5C3D8F]"
                   />
                 </div>
-                <div className="h-36 bg-[#f0ece0] rounded-xl flex items-center justify-center border border-[#e8e0cc]">
-                  <div className="text-center">
-                    <MapPin className="w-8 h-8 text-[#101726]/20 mx-auto mb-2" />
-                    <p className="text-xs text-[#101726]/35">Map preview will appear after address entry</p>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#101726]/70 mb-2">Pin location on map</label>
+                  <LocationPicker
+                    initialQuery={locationQuery}
+                    lat={form.lat}
+                    lng={form.lng}
+                    onChange={handleLocationChange}
+                  />
+                  {form.lat !== 0 && (
+                    <p className="text-xs text-[#008A81] mt-1 font-medium">
+                      📍 Coordinates: {form.lat.toFixed(5)}, {form.lng.toFixed(5)}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
@@ -411,6 +470,30 @@ export default function ListPantryPage() {
                     ))}
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#101726]/70 mb-2">Visit type</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { value: 'walk-in', label: 'Walk-in', icon: '🚶' },
+                      { value: 'appointment', label: 'Appointment', icon: '📅' },
+                      { value: 'both', label: 'Both', icon: '✅' },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => update('appointmentType', opt.value)}
+                        className="flex flex-col items-center gap-1 py-3 rounded-xl border-2 text-xs font-semibold transition-all"
+                        style={
+                          form.appointmentType === opt.value
+                            ? { borderColor: '#5C3D8F', background: '#5C3D8F12', color: '#5C3D8F' }
+                            : { borderColor: '#e8e0cc', background: 'white', color: '#101726' }
+                        }
+                      >
+                        <span className="text-lg">{opt.icon}</span>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -422,14 +505,47 @@ export default function ListPantryPage() {
                   <h2 className="text-xl font-bold text-[#101726] mb-1">Add photos</h2>
                   <p className="text-sm text-[#101726]/50">Photos help families recognize your pantry and build trust.</p>
                 </div>
-                <div className="border-2 border-dashed border-[#e8e0cc] rounded-2xl p-10 text-center hover:border-[#5C3D8F]/50 transition-colors cursor-pointer">
-                  <Camera className="w-10 h-10 text-[#101726]/20 mx-auto mb-3" />
-                  <p className="text-sm font-medium text-[#101726]/60 mb-1">Drag & drop photos here</p>
+                <div
+                  className={`border-2 border-dashed rounded-2xl p-8 text-center transition-colors cursor-pointer ${
+                    dragActive ? 'border-[#5C3D8F] bg-[#5C3D8F]/5' : 'border-[#e8e0cc] hover:border-[#5C3D8F]/50'
+                  }`}
+                  onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                  onDragLeave={() => setDragActive(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => handlePhotoFiles(e.target.files)}
+                  />
+                  <Upload className="w-10 h-10 text-[#101726]/20 mx-auto mb-3" />
+                  <p className="text-sm font-medium text-[#101726]/60 mb-1">
+                    {dragActive ? 'Drop photos here' : 'Drag & drop photos here'}
+                  </p>
                   <p className="text-xs text-[#101726]/35 mb-4">PNG, JPG up to 10MB each</p>
-                  <button className="px-5 py-2 rounded-xl text-sm font-semibold border-2 border-[#5C3D8F] text-[#5C3D8F] hover:bg-[#5C3D8F]/5 transition-colors">
+                  <span className="px-5 py-2 rounded-xl text-sm font-semibold border-2 border-[#5C3D8F] text-[#5C3D8F] hover:bg-[#5C3D8F]/5 transition-colors">
                     Browse files
-                  </button>
+                  </span>
                 </div>
+                {form.photos.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {form.photos.map((photo, i) => (
+                      <div key={i} className="relative rounded-xl overflow-hidden aspect-square border border-[#e8e0cc]">
+                        <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
+                        <button
+                          onClick={(e) => { e.stopPropagation(); removePhoto(i); }}
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-white/90 flex items-center justify-center hover:bg-red-50 transition-colors"
+                        >
+                          <X className="w-3 h-3 text-[#101726]" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <p className="text-xs text-[#101726]/40 text-center">
                   Add at least 1 photo to increase listing visibility by 3x.
                 </p>
@@ -522,6 +638,18 @@ export default function ListPantryPage() {
                         {form.dietary.map((d) => (
                           <span key={d} className="px-2 py-0.5 rounded-full bg-[#008A8112] text-[#008A81] font-medium">{d}</span>
                         ))}
+                      </div>
+                    )}
+                    {form.appointmentType && (
+                      <div className="flex items-center gap-1.5">
+                        <span>{form.appointmentType === 'walk-in' ? '🚶' : form.appointmentType === 'appointment' ? '📅' : '✅'}</span>
+                        <span className="capitalize">{form.appointmentType === 'both' ? 'Walk-in & Appointment' : form.appointmentType}</span>
+                      </div>
+                    )}
+                    {form.photos.length > 0 && (
+                      <div className="flex items-center gap-1.5">
+                        <span>📸</span>
+                        <span>{form.photos.length} photo{form.photos.length !== 1 ? 's' : ''} added</span>
                       </div>
                     )}
                   </div>
