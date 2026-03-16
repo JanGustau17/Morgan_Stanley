@@ -117,7 +117,7 @@ function Navbar() {
             </svg>
           </div>
           <img
-            src="https://www.foodhelpline.org/_next/static/media/wordmark.483cff36.svg"
+            src="/reach-wordmark.png"
             alt="lemontree"
             className="h-6 w-auto"
             style={{ filter: "brightness(0)" }}
