@@ -40,11 +40,10 @@ export default function ThreadPage() {
   const [replyVotes, setReplyVotes] = useState<Set<string>>(new Set());
 
   const fetchThread = useCallback(async () => {
-    const res = await fetch(`/api/forum/threads?sort=newest`);
+    const res = await fetch(`/api/forum/threads/${threadId}`);
     if (res.ok) {
-      const threads: ForumThread[] = await res.json();
-      const found = threads.find((t) => t.id === threadId);
-      if (found) setThread(found);
+      const data: ForumThread = await res.json();
+      setThread(data);
     }
   }, [threadId]);
 

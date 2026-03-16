@@ -62,14 +62,11 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Increment reply_count on thread
-  await supabase.rpc("increment_reply_count", { tid: threadId }).catch(() => {});
-  // Fallback: manual increment if RPC doesn't exist
   if (!data) {
     return NextResponse.json({ error: "Failed to create reply" }, { status: 500 });
   }
 
-  // Manual increment as fallback
+  // Increment reply_count on thread
   const { data: thread } = await supabase
     .from("forum_threads")
     .select("reply_count")
