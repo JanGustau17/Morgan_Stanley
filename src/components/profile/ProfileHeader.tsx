@@ -7,6 +7,8 @@ import {
   Star, Pencil, Check, X, Palette,
   Upload, ImageIcon, Sparkles, Trash2, AlertTriangle,
 } from 'lucide-react';
+import { useState as useReactState } from 'react';
+import { createClient } from '@/lib/supabase/client';
 
 const PRESETS = [
   { id: 'teal-purple', label: 'Aurora',   value: 'linear-gradient(120deg, #00605a 0%, #008A81 45%, #6943B6 100%)' },
@@ -110,6 +112,13 @@ export function ProfileHeader({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+
+  // Phone verification state
+  const [editablePhone, setEditablePhone] = useReactState(phone ?? '');
+  const [verifStep, setVerifStep] = useReactState<'idle' | 'code' | 'verified'>(phone ? 'verified' : 'idle');
+  const [verifCode, setVerifCode] = useReactState('');
+  const [verifLoading, setVerifLoading] = useReactState(false);
+  const [verifError, setVerifError] = useReactState('');
 
   const levelTitle = LEVEL_TITLES[level] ?? `Level ${level}`;
 
@@ -249,12 +258,20 @@ export function ProfileHeader({
                 {level}
               </div>
             </div>
-            <div
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold"
-              style={{ background: '#f5f3ff', color: 'var(--third)' }}
-            >
-              <Star className="h-3.5 w-3.5" />
-              {levelTitle}
+            <div className="flex flex-col items-end gap-1">
+              <div
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold"
+                style={{ background: '#f5f3ff', color: 'var(--third)' }}
+              >
+                <Star className="h-3.5 w-3.5" />
+                {levelTitle}
+              </div>
+              {verifStep === 'verified' && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200">
+                  <img src="/verified-badge.png" alt="" className="h-3.5 w-3.5" />
+                  Trusted organizer
+                </div>
+              )}
             </div>
           </div>
 
@@ -271,7 +288,16 @@ export function ProfileHeader({
             </button>
           </div>
           {email && <p className="text-sm mt-0.5" style={{ color: 'var(--muted)' }}>{email}</p>}
-          {phone && <p className="text-sm" style={{ color: 'var(--muted)' }}>{phone}</p>}
+          {editablePhone && (
+            <p className="text-sm" style={{ color: 'var(--muted)' }}>
+              {editablePhone}
+              {verifStep === 'verified' && (
+                <span className="ml-2 text-xs font-semibold text-green-700">
+                  (phone verified)
+                </span>
+              )}
+            </p>
+          )}
         </div>
       </div>
 
@@ -381,6 +407,109 @@ export function ProfileHeader({
               <p className="text-[10px] mt-1.5 text-gray-400">JPG, PNG, GIF, WebP — any image from your device</p>
             </div>
           </div>
+
+            <div style={{ borderTop: '1px solid var(--border)' }} />
+
+            {/* Phone & SMS verification */}
+            <div>
+              <label className="text-xs font-bold uppercase tracking-widest block mb-1" style={{ color: 'var(--primary)' }}>
+                Phone (optional)
+              </label>
+              <p className="text-xs mb-2" style={{ color: 'var(--muted)' }}>
+                Add a phone number to receive SMS updates. Verifying your number gives you a small
+                “trusted organizer” badge that organizers can see.
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <input
+                  value={editablePhone}
+                  onChange={(e) => setEditablePhone(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border text-sm outline-none transition-all"
+                  style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'var(--background)' }}
+                  placeholder="e.g. +1 555 000 0000"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setVerifError('');
+                    if (!editablePhone.trim()) {
+                      setVerifError('Please enter a phone number first.');
+                      return;
+                    }
+                    try {
+                      setVerifLoading(true);
+                      const supabase = createClient();
+                      const { error } = await supabase.auth.signInWithOtp({ phone: editablePhone.trim() });
+                      if (error) throw error;
+                      setVerifStep('code');
+                    } catch (err) {
+                      setVerifError(err instanceof Error ? err.message : 'Failed to send code');
+                    } finally {
+                      setVerifLoading(false);
+                    }
+                  }}
+                  disabled={verifLoading}
+                  className="mt-2 sm:mt-0 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+                  style={{ background: 'var(--primary)' }}
+                >
+                  {verifLoading ? 'Sending…' : verifStep === 'verified' ? 'Reverify' : 'Send code'}
+                </button>
+              </div>
+              {verifStep === 'code' && (
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <input
+                    value={verifCode}
+                    onChange={(e) => setVerifCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="w-full px-3 py-2 rounded-xl border text-sm outline-none transition-all"
+                    style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'var(--background)' }}
+                    placeholder="6‑digit code"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setVerifError('');
+                      if (!verifCode.trim()) {
+                        setVerifError('Enter the code we sent you.');
+                        return;
+                      }
+                      try {
+                        setVerifLoading(true);
+                        const supabase = createClient();
+                        const { error } = await supabase.auth.verifyOtp({
+                          phone: editablePhone.trim(),
+                          token: verifCode.trim(),
+                          type: 'sms',
+                        });
+                        if (error) throw error;
+                        await fetch('/api/profile/update', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            phone: editablePhone.trim(),
+                            phone_verified: true,
+                          }),
+                        });
+                        setVerifStep('verified');
+                        setVerifCode('');
+                      } catch (err) {
+                        setVerifError(err instanceof Error ? err.message : 'Invalid or expired code');
+                      } finally {
+                        setVerifLoading(false);
+                      }
+                    }}
+                    disabled={verifLoading}
+                    className="mt-2 sm:mt-0 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+                    style={{ background: 'var(--secondary)' }}
+                  >
+                    {verifLoading ? 'Verifying…' : 'Verify number'}
+                  </button>
+                </div>
+              )}
+              {verifError && (
+                <p className="mt-2 text-xs text-red-600">
+                  {verifError}
+                </p>
+              )}
+            </div>
 
           {/* Panel footer */}
           <div

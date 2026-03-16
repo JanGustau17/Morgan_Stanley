@@ -16,18 +16,22 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json();
-    const { name, banner_id, banner_image, greeting_id } = body as {
+    const { name, banner_id, banner_image, greeting_id, phone, phone_verified } = body as {
       name?: string;
       banner_id?: string;
       banner_image?: string | null;
       greeting_id?: string;
+      phone?: string | null;
+      phone_verified?: boolean;
     };
 
     const updates: Record<string, unknown> = {};
-    if (name?.trim())               updates.name = name.trim();
-    if (banner_id)                  updates.banner_id = banner_id;
+    if (name !== undefined)          updates.name = name?.trim() || null;
+    if (banner_id)                   updates.banner_id = banner_id;
     if (banner_image !== undefined)  updates.banner_image = banner_image;
-    if (greeting_id)                updates.greeting_id = greeting_id;
+    if (greeting_id)                 updates.greeting_id = greeting_id;
+    if (phone !== undefined)         updates.phone = phone;
+    if (phone_verified !== undefined) updates.phone_verified = phone_verified;
 
     if (Object.keys(updates).length === 0) {
       return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
