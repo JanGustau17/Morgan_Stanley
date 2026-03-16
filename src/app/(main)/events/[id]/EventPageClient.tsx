@@ -76,7 +76,7 @@ export function EventPageClient({
           resourceType: { id: 'FOOD_PANTRY' | 'SOUP_KITCHEN' };
         }>;
 
-        const pins = await Promise.all(
+        const pins: (FoodBankPin | null)[] = await Promise.all(
           top4.map(async (r) => {
             const addr = [r.addressStreet1, r.city, r.state, r.zipCode]
               .filter(Boolean)
