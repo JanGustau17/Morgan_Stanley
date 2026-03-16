@@ -5,48 +5,40 @@ import { signIn } from "next-auth/react";
 
 export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log({
-      phone,
-      password,
+    // Use Google OAuth for authentication. Pass email as a login_hint so the
+    // Google sign-in screen can pre-fill the account when possible.
+    void signIn("google", {
+      callbackUrl: "/",
+      // login_hint is respected by Google but ignored by other providers.
+      login_hint: email || undefined,
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 font-sans">
-      {/* Phone - static label + country prefix */}
+      {/* Email - primary identifier */}
       <div>
         <label
-          htmlFor="phone"
+          htmlFor="email"
           className="mb-1.5 block text-sm font-semibold text-brand-muted"
         >
-          Phone Number
+          Email
         </label>
-        <div className="flex rounded-lg border border-brand-border bg-white transition-all duration-300 focus-within:border-brand-yellow focus-within:ring-2 focus-within:ring-brand-yellow/30 hover:bg-gray-50/80">
-          <span
-            className="flex items-center gap-1.5 border-r border-brand-border px-3 text-sm text-brand-muted"
-            aria-hidden
-          >
-            <span className="text-base" role="img" aria-hidden>
-              🇺🇸
-            </span>
-            +1
-          </span>
-          <input
-            type="tel"
-            id="phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+1 (555) 000-0000"
-            className="w-full border-0 bg-transparent px-3 py-2.5 text-brand-text outline-none placeholder:text-brand-muted"
-            aria-label="Phone number"
-            autoComplete="tel"
-          />
-        </div>
+        <input
+          type="email"
+          id="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@example.com"
+          className="w-full rounded-lg border border-brand-border bg-white px-3 py-2.5 text-brand-text outline-none transition-all duration-300 hover:bg-gray-50/80 focus:border-brand-yellow focus:ring-2 focus:ring-brand-yellow/30"
+          aria-label="Email"
+          autoComplete="email"
+        />
       </div>
 
       {/* Password - static label + show/hide */}
