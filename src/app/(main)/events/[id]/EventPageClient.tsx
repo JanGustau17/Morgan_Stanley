@@ -1,10 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { UserPlus, CheckCircle2, CalendarDays, MapPin, Users } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import type { FoodBankPin } from '@/components/map/EventMap';
+
+const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
 const EventMap = dynamic(() => import('@/components/map/EventMap'), {
   ssr: false,
@@ -49,10 +52,62 @@ export function EventPageClient({
   language,
 }: EventPageClientProps) {
   const router = useRouter();
-  const [joined, setJoined]   = useState(alreadyJoined);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState<string | null>(null);
-  const [pins, setPins]       = useState(initialPins);
+  const [joined, setJoined]     = useState(alreadyJoined);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const [pins, setPins]         = useState(initialPins);
+  const [foodBanks, setFoodBanks] = useState<FoodBankPin[]>([]);
+
+  useEffect(() => {
+    if (!mapCenter || !MAPBOX_TOKEN) return;
+    const { lat, lng } = mapCenter;
+
+    fetch(`/api/resources/nearby?lat=${lat}&lng=${lng}`)
+      .then((r) => r.json())
+      .then(async (data) => {
+        if (!Array.isArray(data.resources)) return;
+        const top4 = data.resources.slice(0, 4) as Array<{
+          id: string;
+          name: string | null;
+          addressStreet1: string | null;
+          city: string | null;
+          state: string | null;
+          zipCode: string | null;
+          resourceType: { id: 'FOOD_PANTRY' | 'SOUP_KITCHEN' };
+        }>;
+
+        const pins = await Promise.all(
+          top4.map(async (r) => {
+            const addr = [r.addressStreet1, r.city, r.state, r.zipCode]
+              .filter(Boolean)
+              .join(', ');
+            if (!addr) return null;
+            try {
+              const res = await fetch(
+                `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(addr)}.json` +
+                  `?access_token=${MAPBOX_TOKEN}&limit=1&types=address,poi`,
+              );
+              const geo = await res.json();
+              const [fbLng, fbLat] = geo.features?.[0]?.center ?? [];
+              if (fbLat == null || fbLng == null) return null;
+              return {
+                id: r.id,
+                name: r.name,
+                lat: fbLat,
+                lng: fbLng,
+                type: r.resourceType.id,
+                address: addr,
+              } satisfies FoodBankPin;
+            } catch {
+              return null;
+            }
+          }),
+        );
+
+        setFoodBanks(pins.filter((p): p is FoodBankPin => p !== null));
+      })
+      .catch(() => {});
+  }, [mapCenter]);
 
   async function handleJoin() {
     if (!isSignedIn) { router.push('/auth'); return; }
@@ -81,6 +136,7 @@ export function EventPageClient({
             lng={mapCenter.lng}
             locationName={mapCenter.name}
             containerClassName="h-full w-full"
+            foodBanks={foodBanks}
           />
         ) : (
           <div className="h-full w-full" style={{ background: '#e8e0cc' }} />
