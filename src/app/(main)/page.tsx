@@ -691,7 +691,7 @@ function Footer() {
             © {new Date().getFullYear()} Lemontree Foods, Inc. All rights reserved.
           </p>
           <p className="text-white/25 text-xs">
-            Built with ❤️ at Morgan Stanley Hackathon 2025
+            Built with ❤️ at Morgan Stanley Hackathon 2026
           </p>
           <a
             href="https://www.foodhelpline.org"
