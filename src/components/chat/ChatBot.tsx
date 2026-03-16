@@ -228,6 +228,7 @@ export function ChatBot() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Ask about food resources, events…"
+                  aria-label="Chat message input"
                   className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#5C3D8F]/20 focus:border-[#5C3D8F] min-h-[44px]"
                   disabled={loading}
                 />

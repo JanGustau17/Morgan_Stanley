@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServiceClient } from '@/lib/supabase/server';
 
-const openai = new OpenAI();
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -95,7 +95,8 @@ export async function POST(req: NextRequest) {
     let nearbyResources: string = '';
     if (location?.lat && location?.lng) {
       try {
-        const resourceUrl = new URL('https://platform.foodhelpline.org/api/resources');
+        const baseUrl = process.env.LEMONTREE_API_BASE || 'https://platform.foodhelpline.org';
+        const resourceUrl = new URL(`${baseUrl}/api/resources`);
         resourceUrl.searchParams.set('lat', String(location.lat));
         resourceUrl.searchParams.set('lng', String(location.lng));
         resourceUrl.searchParams.set('take', '5');
