@@ -62,6 +62,15 @@ export async function DELETE(
   const { id } = await params;
   const supabase = createServiceClient();
 
+  // Delete related data first (respects FK constraints)
+  await Promise.all([
+    supabase.from('campaign_volunteers').delete().eq('campaign_id', id),
+    supabase.from('flyer_pins').delete().eq('campaign_id', id),
+    supabase.from('conversions').delete().eq('campaign_id', id),
+    supabase.from('point_events').delete().eq('campaign_id', id),
+    supabase.from('messages').delete().eq('campaign_id', id),
+  ]);
+
   const { error } = await supabase.from("campaigns").delete().eq("id", id);
 
   if (error) {

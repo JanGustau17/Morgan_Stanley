@@ -50,7 +50,19 @@ export async function DELETE(
   const { id } = await params;
   const supabase = createServiceClient();
 
-  // Delete volunteer; ensure FK constraints allow (e.g. campaign_volunteers, etc. may need handling)
+  // Delete related data first (respects FK constraints)
+  await Promise.all([
+    supabase.from('forum_votes').delete().eq('volunteer_id', id),
+    supabase.from('forum_replies').delete().eq('author_id', id),
+    supabase.from('forum_threads').delete().eq('author_id', id),
+    supabase.from('point_events').delete().eq('volunteer_id', id),
+    supabase.from('badges').delete().eq('volunteer_id', id),
+    supabase.from('campaign_volunteers').delete().eq('volunteer_id', id),
+    supabase.from('flyer_pins').delete().eq('volunteer_id', id),
+    supabase.from('conversions').delete().eq('volunteer_id', id),
+  ]);
+
+  // Delete the volunteer row itself
   const { error } = await supabase.from("volunteers").delete().eq("id", id);
 
   if (error) {

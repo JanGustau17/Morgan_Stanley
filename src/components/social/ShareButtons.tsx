@@ -85,7 +85,7 @@ export function ShareButtons({ url, title }: ShareButtonsProps) {
         {platforms.map((platform) => (
           <button
             key={platform.name}
-            onClick={() => handleShare(platform.getUrl as any)}
+            onClick={() => handleShare(platform.getUrl as (url: string, title: string) => string)}
             className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-white transition-all ${platform.color} hover:scale-105 active:scale-95`}
             aria-label={`Share on ${platform.name}`}
           >

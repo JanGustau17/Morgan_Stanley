@@ -43,7 +43,7 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const volunteerId = (session.user as any).volunteerId as string | undefined;
+  const volunteerId = (session.user as { volunteerId?: string }).volunteerId;
   if (!volunteerId) {
     return NextResponse.json({ error: 'Volunteer not found' }, { status: 400 });
   }

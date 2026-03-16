@@ -66,19 +66,16 @@ export async function POST(
     return NextResponse.json({ error: "Failed to create reply" }, { status: 500 });
   }
 
-  // Increment reply_count on thread
-  const { data: thread } = await supabase
-    .from("forum_threads")
-    .select("reply_count")
-    .eq("id", threadId)
-    .single();
+  // Update reply_count atomically using count of replies
+  const { count } = await supabase
+    .from("forum_replies")
+    .select("*", { count: "exact", head: true })
+    .eq("thread_id", threadId);
 
-  if (thread) {
-    await supabase
-      .from("forum_threads")
-      .update({ reply_count: (thread.reply_count ?? 0) + 1 })
-      .eq("id", threadId);
-  }
+  await supabase
+    .from("forum_threads")
+    .update({ reply_count: count ?? 0 })
+    .eq("id", threadId);
 
   return NextResponse.json(data, { status: 201 });
 }
