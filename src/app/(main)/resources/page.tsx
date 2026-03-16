@@ -202,6 +202,8 @@ export default function ResourcesPage() {
                     onChange={(e) => setZipCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
                     placeholder="Zip code"
                     className="w-full pl-11 pr-4 py-3.5 rounded-xl text-gray-900 bg-white border-0 focus:ring-2 focus:ring-[#ffcc10] text-sm min-h-[48px]"
+                    inputMode="numeric"
+                    pattern="[0-9]{5}"
                     maxLength={5}
                   />
                 </div>
@@ -459,7 +461,7 @@ export default function ResourcesPage() {
                                     className="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full"
                                   >
                                     {s.day}
-                                    {s.startTime
+                                    {s.startTime && !isNaN(new Date(s.startTime).getTime())
                                       ? ` ${new Date(s.startTime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
                                       : ''}
                                   </span>

@@ -138,7 +138,12 @@ export async function POST(req: NextRequest) {
     const lastMessage = messages[messages.length - 1]?.content ?? '';
     let zipResources = '';
     const zipMatch = lastMessage.match(/\b(\d{5})\b/);
-    if (zipMatch) {
+    // Only treat as zip if the message is short or contains location-related keywords
+    const isLikelyZip = zipMatch && (
+      lastMessage.length < 40 ||
+      /zip|code|area|near|around|close|local|in\s+\d{5}|resources?\s+\d{5}/i.test(lastMessage)
+    );
+    if (isLikelyZip) {
       try {
         const data = await fetchResources({
           location: zipMatch[1],
