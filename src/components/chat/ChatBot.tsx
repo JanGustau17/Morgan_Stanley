@@ -105,7 +105,7 @@ export function ChatBot() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button — sits above mobile bottom nav (h-14 = 56px) */}
       <AnimatePresence>
         {!open && (
           <motion.button
@@ -115,7 +115,7 @@ export function ChatBot() {
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => setOpen(true)}
-            className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white"
+            className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white"
             style={{ background: '#5C3D8F' }}
             aria-label="Open chat assistant"
           >
@@ -126,7 +126,7 @@ export function ChatBot() {
         )}
       </AnimatePresence>
 
-      {/* Chat window */}
+      {/* Chat window — on mobile anchored above bottom nav; on desktop bottom-right corner */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -134,7 +134,7 @@ export function ChatBot() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="fixed bottom-6 right-6 z-50 w-[380px] max-w-[calc(100vw-48px)] h-[520px] max-h-[calc(100vh-120px)] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
+            className="fixed bottom-[72px] right-2 left-2 md:left-auto md:bottom-6 md:right-6 z-50 md:w-[380px] md:max-w-[calc(100vw-48px)] h-[min(520px,calc(100dvh-140px))] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div
@@ -163,25 +163,33 @@ export function ChatBot() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-gray-50">
-              {messages.map((msg, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                      msg.role === 'user'
-                        ? 'bg-[#5C3D8F] text-white rounded-br-md'
-                        : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md shadow-sm'
-                    }`}
+              {messages.map((msg, i) => {
+                const lines = msg.content.split('\n');
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    {msg.content}
-                  </div>
-                </motion.div>
-              ))}
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                        msg.role === 'user'
+                          ? 'bg-[#5C3D8F] text-white rounded-br-md'
+                          : 'bg-white text-gray-800 border border-gray-200 rounded-bl-md shadow-sm'
+                      }`}
+                    >
+                      {lines.map((line, j) => (
+                        <span key={j}>
+                          {line}
+                          {j < lines.length - 1 && <br />}
+                        </span>
+                      ))}
+                    </div>
+                  </motion.div>
+                );
+              })}
               {loading && (
                 <motion.div
                   initial={{ opacity: 0 }}
