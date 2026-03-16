@@ -1,9 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { CardSkeleton } from "@/components/ui/Skeleton";
+const LandingHeatmap = dynamic(
+  () => import('@/components/map/LandingHeatmap'),
+  { ssr: false, loading: () => <div style={{ width: '100%', height: '100%', borderRadius: 10, background: 'rgba(255,255,255,0.08)' }} /> }
+);
+
+interface LandingStats {
+  activeCampaign: {
+    id: string;
+    name: string;
+    neighborhood: string | null;
+    volunteersNeeded: number;
+    volunteersJoined: number;
+    status: string;
+  } | null;
+  stats: {
+    totalCampaigns: number;
+    totalVolunteers: number;
+    weeklyPins: number;
+  };
+  topVolunteer: {
+    name: string | null;
+    weeklyPoints: number;
+    streakDays: number;
+  } | null;
+  weeklyPinCoords: { lat: number; lng: number }[];
+}
 
 interface Event {
   id: string;
@@ -26,8 +51,26 @@ function formatDate(iso: string) {
 }
 
 function HeroSection() {
+  const [landingStats, setLandingStats] = useState<LandingStats | null>(null);
+
+  useEffect(() => {
+    fetch('/api/landing-stats')
+      .then((r) => r.json())
+      .then(setLandingStats)
+      .catch((err) => { console.error('[landing-stats] fetch failed:', err); });
+  }, []);
+
+  const campaign = landingStats?.activeCampaign;
+  const stats = landingStats?.stats;
+  const topVol = landingStats?.topVolunteer;
+  const pinCoords = landingStats?.weeklyPinCoords ?? [];
+
+  const fillPct = campaign
+    ? Math.min(100, (campaign.volunteersJoined / campaign.volunteersNeeded) * 100)
+    : 40;
+
   return (
-    <section className="pt-16 min-h-screen bg-[#fff6E0] flex items-center relative overflow-hidden">
+    <section className="pt-16 bg-[#fff6E0] relative overflow-hidden">
       <div
         className="absolute top-20 right-[-100px] w-[480px] h-[480px] rounded-full pointer-events-none"
         style={{
@@ -43,20 +86,11 @@ function HeroSection() {
         }}
       />
 
-      <div className="relative z-10 max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center w-full">
-        <motion.div
-          initial={{ opacity: 0, x: -30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-        >
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-            className="inline-flex items-center gap-2 bg-[#ffcc10] text-[#101726] text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6"
-          >
+      <div className="relative z-10 max-w-6xl mx-auto px-6 pt-12 pb-16 grid md:grid-cols-2 gap-12 items-start w-full">
+        <div>
+          <div className="inline-flex items-center gap-2 bg-[#ffcc10] text-[#101726] text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6">
             <span>🍋</span> Volunteer Platform
-          </motion.div>
+          </div>
 
           <h1
             className="text-5xl md:text-6xl font-bold text-[#101726] leading-tight mb-5"
@@ -92,102 +126,109 @@ function HeroSection() {
 
           <div className="mt-10 flex flex-wrap gap-8">
             {[
-              { value: "900k+", label: "Families helped" },
-              { value: "30+", label: "Corporate partners" },
-              { value: "12,988", label: "Helped yesterday" },
-            ].map((s, i) => (
-              <motion.div
-                key={s.label}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 + i * 0.1, duration: 0.4 }}
-              >
+              { value: stats ? `${stats.totalCampaigns}` : '—', label: 'Campaigns created' },
+              { value: stats ? `${stats.totalVolunteers}` : '—', label: 'Volunteers joined' },
+              { value: stats ? `${stats.weeklyPins}` : '—', label: 'Flyers logged this week' },
+            ].map((s) => (
+              <div key={s.label}>
                 <div className="text-2xl font-bold text-[#008A81]">{s.value}</div>
                 <div className="text-xs text-[#101726]/50 mt-0.5 leading-snug">
                   {s.label}
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-          className="hidden md:flex flex-col gap-4"
-        >
-          <div className="bg-white rounded-2xl p-5 shadow border border-[#e8e0cc]">
-            <div className="flex items-center gap-3 mb-3">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl"
-                style={{ background: "#008A8114" }}
-              >
-                📍
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold text-[#101726] text-sm truncate">
-                  Brooklyn Flyer Blitz
-                </div>
-                <div className="text-xs text-[#101726]/45">Bushwick · 1.2 mi away</div>
-              </div>
-              <span
-                className="shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                style={{ background: "#ffcc1022", color: "#7a5f00" }}
-              >
-                Active
+        <div className="hidden md:flex flex-col gap-4">
+          {/* Weekly flyer heatmap — map first, tall */}
+          <div className="rounded-2xl overflow-hidden relative" style={{ height: 340 }}>
+            <LandingHeatmap pins={pinCoords} />
+            <div className="absolute top-3.5 left-4">
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full" style={{ background: 'rgba(255,255,255,0.85)', color: '#008A81' }}>
+                Live Flyer Heatmap
               </span>
             </div>
-            <div className="h-1.5 bg-[#e8e0cc] rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full"
-                style={{ width: "40%", background: "#008A81" }}
-              />
-            </div>
-            <div className="text-xs text-[#101726]/45 mt-1.5">8 volunteers joined</div>
-          </div>
-
-          <div
-            className="rounded-2xl p-5 ml-8 text-white"
-            style={{ background: "#008A81" }}
-          >
-            <div className="text-xs font-bold uppercase tracking-widest opacity-70 mb-2">
-              Live Flyer Heatmap
-            </div>
-            <div
-              className="h-20 rounded-xl flex items-center justify-center text-3xl opacity-50"
-              style={{ background: "rgba(255,255,255,0.12)" }}
-            >
-              🗺️
-            </div>
-            <div className="text-sm font-medium mt-2 opacity-90">
-              347 spots logged this week
+            <div className="absolute bottom-3.5 left-4">
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,255,255,0.85)', color: '#101726' }}>
+                {stats ? `${stats.weeklyPins} spot${stats.weeklyPins !== 1 ? 's' : ''} logged this week` : '…'}
+              </span>
             </div>
           </div>
 
+          {/* Active campaign card */}
+          {campaign ? (
+            <Link href={`/events/${campaign.id}`} className="bg-white rounded-2xl p-5 shadow border border-[#e8e0cc] hover:shadow-md transition-shadow">
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0"
+                  style={{ background: "#008A8114" }}
+                >
+                  📍
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-[#101726] text-sm truncate">
+                    {campaign.name}
+                  </div>
+                  <div className="text-xs text-[#101726]/45 truncate">
+                    {campaign.neighborhood ?? 'Community event'}
+                  </div>
+                </div>
+                <span
+                  className="shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full capitalize"
+                  style={{ background: "#ffcc1022", color: "#7a5f00" }}
+                >
+                  {campaign.status}
+                </span>
+              </div>
+              <div className="h-1.5 bg-[#e8e0cc] rounded-full overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${fillPct}%`, background: "#008A81" }}
+                />
+              </div>
+              <div className="text-xs text-[#101726]/45 mt-1.5">
+                {campaign.volunteersJoined} / {campaign.volunteersNeeded} volunteers joined
+              </div>
+            </Link>
+          ) : (
+            <div className="bg-white rounded-2xl p-5 shadow border border-[#e8e0cc]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#008A8114] flex items-center justify-center text-xl">📍</div>
+                <div className="text-sm text-[#101726]/40 italic">No active campaigns yet</div>
+              </div>
+            </div>
+          )}
+
+          {/* Top volunteer */}
           <div
-            className="rounded-2xl p-5 mr-8"
+            className="rounded-2xl p-5"
             style={{ background: "#ffcc10" }}
           >
             <div className="text-xs font-bold uppercase tracking-widest text-[#101726]/55 mb-2">
               Top Volunteer This Week
             </div>
-            <div className="flex items-center gap-3">
-              <div
-                className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm"
-                style={{ background: "rgba(0,0,0,0.1)" }}
-              >
-                🏆
-              </div>
-              <div>
-                <div className="font-bold text-[#101726] text-sm">Sarah M.</div>
-                <div className="text-xs text-[#101726]/55">
-                  1,240 pts · 8-week streak
+            {topVol ? (
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm shrink-0"
+                  style={{ background: "rgba(0,0,0,0.1)" }}
+                >
+                  🏆
+                </div>
+                <div>
+                  <div className="font-bold text-[#101726] text-sm">{topVol.name ?? 'Anonymous'}</div>
+                  <div className="text-xs text-[#101726]/55">
+                    {topVol.weeklyPoints.toLocaleString()} pts
+                    {topVol.streakDays > 0 ? ` · ${topVol.streakDays}-day streak` : ''}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-sm text-[#101726]/45 italic">Be the first this week!</div>
+            )}
           </div>
-        </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -239,15 +280,10 @@ function MissionSection() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {pillars.map((p, i) => (
-            <motion.div
+          {pillars.map((p) => (
+            <div
               key={p.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-50px" }}
-              transition={{ duration: 0.4, delay: i * 0.1 }}
-              whileHover={{ y: -4, boxShadow: "0 12px 40px rgba(0,0,0,0.1)" }}
-              className="rounded-2xl p-6 border border-[#e8e0cc] transition-colors duration-200"
+              className="rounded-2xl p-6 border border-[#e8e0cc] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
               style={{ background: "#fff6E0" }}
             >
               <div
@@ -258,7 +294,7 @@ function MissionSection() {
               </div>
               <h3 className="font-bold text-[#101726] text-sm mb-2">{p.title}</h3>
               <p className="text-xs text-[#101726]/60 leading-relaxed">{p.desc}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
@@ -270,14 +306,8 @@ type FilterType = "all" | "active";
 
 function EventCard({ event }: { event: Event }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-30px" }}
-      transition={{ duration: 0.4 }}
-      whileHover={{ y: -4, boxShadow: "0 12px 40px rgba(0,0,0,0.1)" }}
-      className="bg-white rounded-2xl border border-[#e8e0cc] p-5 flex flex-col gap-3.5 transition-colors duration-200"
-    >      <div className="flex items-start justify-between gap-2">
+    <div className="bg-white rounded-2xl border border-[#e8e0cc] p-5 flex flex-col gap-3.5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
+      <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap gap-1.5">
           {event.tags.map((tag) => (
             <span
@@ -324,12 +354,12 @@ function EventCard({ event }: { event: Event }) {
 
       <Link
         href={`/events/${event.id}`}
-        className="mt-auto block text-center py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:opacity-90 hover:shadow-md min-h-[44px] flex items-center justify-center"
+        className="mt-auto block text-center py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
         style={{ background: "#5C3D8F" }}
       >
         View Event →
       </Link>
-    </motion.div>
+    </div>
   );
 }
 
@@ -426,10 +456,9 @@ function EventsSection() {
         </div>
 
         {events.length === 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[...Array(6)].map((_, i) => (
-              <CardSkeleton key={i} />
-            ))}
+          <div className="text-center py-20 text-[#101726]/40">
+            <div className="text-5xl mb-3">🍋</div>
+            <p className="font-medium">Loading events…</p>
           </div>
         ) : filtered.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -475,14 +504,7 @@ function HowItWorksSection() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative">
           <div className="hidden lg:block absolute top-10 left-[12.5%] right-[12.5%] h-px bg-[#e8e0cc] z-0" />
           {steps.map((s, i) => (
-            <motion.div
-              key={s.num}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.15 }}
-              className="relative z-10 flex flex-col items-center text-center"
-            >
+            <div key={s.num} className="relative z-10 flex flex-col items-center text-center">
               <div
                 className="w-20 h-20 rounded-full flex items-center justify-center text-3xl mb-4 border-4 border-white shadow-sm"
                 style={{ background: i % 2 === 0 ? "#008A81" : "#ffcc10" }}
@@ -496,7 +518,7 @@ function HowItWorksSection() {
               <p className="text-xs text-[#101726]/55 leading-relaxed max-w-[150px]">
                 {s.desc}
               </p>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
@@ -564,19 +586,12 @@ function DonateSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
-          {cards.map((card, i) => (
-            <motion.div
-              key={card.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-30px" }}
-              transition={{ duration: 0.4, delay: i * 0.1 }}
-              whileHover={{ y: -4, boxShadow: "0 12px 40px rgba(0,0,0,0.1)" }}
-            >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {cards.map((card) => (
             <Link
+              key={card.title}
               href={card.href}
-              className="group flex flex-col items-start gap-3 p-6 rounded-2xl border transition-all duration-200"
+              className="group flex flex-col items-start gap-3 p-6 rounded-2xl border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
               style={
                 card.primary
                   ? { background: "#5C3D8F", borderColor: "#5C3D8F" }
@@ -618,7 +633,6 @@ function DonateSection() {
                 Learn more →
               </span>
             </Link>
-            </motion.div>
           ))}
         </div>
 
@@ -647,13 +661,7 @@ function CTASection() {
           backgroundSize: "20px 20px",
         }}
       />
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 max-w-3xl mx-auto px-6 text-center"
-      >
+      <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
         <h2
           className="text-4xl md:text-5xl font-bold text-white mb-5"
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
@@ -678,7 +686,7 @@ function CTASection() {
             I Already Have an Account
           </Link>
         </div>
-      </motion.div>
+      </div>
     </section>
   );
 }
@@ -690,7 +698,7 @@ function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 pb-10 border-b border-white/10">
           <div className="md:col-span-2">
             <img
-              src="https://www.foodhelpline.org/_next/static/media/wordmark.483cff36.svg"
+              src="/reach-wordmark.png"
               alt="Lemontree"
               className="h-6 w-auto mb-3 brightness-0 invert"
             />

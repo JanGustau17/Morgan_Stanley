@@ -225,7 +225,7 @@ export default function LocationPicker({ initialQuery, lat, lng, onChange }: Loc
       </div>
 
       {/* ── Map ── */}
-      <div className="relative h-64 overflow-hidden rounded-xl border border-gray-200">
+      <div className="relative h-96 overflow-hidden rounded-xl border border-gray-200">
         {geocoding && (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-sm">
             <div className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow">
