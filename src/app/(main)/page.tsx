@@ -57,7 +57,7 @@ function HeroSection() {
     fetch('/api/landing-stats')
       .then((r) => r.json())
       .then(setLandingStats)
-      .catch(() => {});
+      .catch((err) => { console.error('[landing-stats] fetch failed:', err); });
   }, []);
 
   const campaign = landingStats?.activeCampaign;

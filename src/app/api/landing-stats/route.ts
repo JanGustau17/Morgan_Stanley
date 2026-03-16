@@ -3,6 +3,21 @@ import { createServiceClient } from '@/lib/supabase/server';
 
 export const revalidate = 60; // cache for 60s
 
+interface CampaignRow {
+  id: string;
+  name: string | null;
+  neighborhood: string | null;
+  volunteers_needed: number;
+  status: string;
+  campaign_volunteers: { count: number }[];
+}
+
+interface TopVolunteerRow {
+  name: string | null;
+  weekly_points: number;
+  streak_days: number;
+}
+
 export async function GET() {
   const supabase = createServiceClient();
 
@@ -50,19 +65,19 @@ export async function GET() {
       .single(),
   ]);
 
-  const volunteerCount =
-    (activeCampaign as { campaign_volunteers?: { count: number }[] } | null)
-      ?.campaign_volunteers?.[0]?.count ?? 0;
+  const campaign = activeCampaign as CampaignRow | null;
+  const volunteerCount = campaign?.campaign_volunteers?.[0]?.count ?? 0;
+  const topVol = topVolunteer as TopVolunteerRow | null;
 
   return NextResponse.json({
-    activeCampaign: activeCampaign
+    activeCampaign: campaign
       ? {
-          id: (activeCampaign as Record<string, unknown>).id,
-          name: (activeCampaign as Record<string, unknown>).name,
-          neighborhood: (activeCampaign as Record<string, unknown>).neighborhood,
-          volunteersNeeded: (activeCampaign as Record<string, unknown>).volunteers_needed,
+          id: campaign.id,
+          name: campaign.name,
+          neighborhood: campaign.neighborhood,
+          volunteersNeeded: campaign.volunteers_needed,
           volunteersJoined: volunteerCount,
-          status: (activeCampaign as Record<string, unknown>).status,
+          status: campaign.status,
         }
       : null,
     stats: {
@@ -71,11 +86,11 @@ export async function GET() {
       weeklyPins: weeklyPinRows?.length ?? 0,
     },
     weeklyPinCoords: (weeklyPinRows ?? []) as { lat: number; lng: number }[],
-    topVolunteer: topVolunteer
+    topVolunteer: topVol
       ? {
-          name: (topVolunteer as Record<string, unknown>).name,
-          weeklyPoints: (topVolunteer as Record<string, unknown>).weekly_points,
-          streakDays: (topVolunteer as Record<string, unknown>).streak_days,
+          name: topVol.name,
+          weeklyPoints: topVol.weekly_points,
+          streakDays: topVol.streak_days,
         }
       : null,
   });
