@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { CardSkeleton } from "@/components/ui/Skeleton";
 
 interface Event {
   id: string;
@@ -42,10 +44,19 @@ function HeroSection() {
       />
 
       <div className="relative z-10 max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center w-full">
-        <div>
-          <div className="inline-flex items-center gap-2 bg-[#ffcc10] text-[#101726] text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6">
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.4 }}
+            className="inline-flex items-center gap-2 bg-[#ffcc10] text-[#101726] text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-6"
+          >
             <span>🍋</span> Volunteer Platform
-          </div>
+          </motion.div>
 
           <h1
             className="text-5xl md:text-6xl font-bold text-[#101726] leading-tight mb-5"
@@ -66,14 +77,14 @@ function HeroSection() {
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
               href="/auth"
-              className="text-center px-7 py-3.5 rounded-full text-white font-semibold text-base transition-colors hover:opacity-90"
+              className="text-center px-7 py-3.5 rounded-full text-white font-semibold text-base transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg min-h-[44px] flex items-center justify-center"
               style={{ background: "#5C3D8F" }}
             >
               Get Started — It&apos;s Free
             </Link>
             <a
               href="#events"
-              className="text-center px-7 py-3.5 rounded-full border-2 border-[#101726]/15 text-[#101726] font-medium text-base hover:border-[#008A81] hover:text-[#008A81] transition-colors"
+              className="text-center px-7 py-3.5 rounded-full border-2 border-[#101726]/15 text-[#101726] font-medium text-base hover:border-[#008A81] hover:text-[#008A81] transition-all duration-200 hover:-translate-y-0.5 min-h-[44px] flex items-center justify-center"
             >
               Browse Events
             </a>
@@ -84,18 +95,28 @@ function HeroSection() {
               { value: "900k+", label: "Families helped" },
               { value: "30+", label: "Corporate partners" },
               { value: "12,988", label: "Helped yesterday" },
-            ].map((s) => (
-              <div key={s.label}>
+            ].map((s, i) => (
+              <motion.div
+                key={s.label}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 + i * 0.1, duration: 0.4 }}
+              >
                 <div className="text-2xl font-bold text-[#008A81]">{s.value}</div>
                 <div className="text-xs text-[#101726]/50 mt-0.5 leading-snug">
                   {s.label}
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        <div className="hidden md:flex flex-col gap-4">
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+          className="hidden md:flex flex-col gap-4"
+        >
           <div className="bg-white rounded-2xl p-5 shadow border border-[#e8e0cc]">
             <div className="flex items-center gap-3 mb-3">
               <div
@@ -166,7 +187,7 @@ function HeroSection() {
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -218,10 +239,15 @@ function MissionSection() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {pillars.map((p) => (
-            <div
+          {pillars.map((p, i) => (
+            <motion.div
               key={p.title}
-              className="rounded-2xl p-6 border border-[#e8e0cc] hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.4, delay: i * 0.1 }}
+              whileHover={{ y: -4, boxShadow: "0 12px 40px rgba(0,0,0,0.1)" }}
+              className="rounded-2xl p-6 border border-[#e8e0cc] transition-colors duration-200"
               style={{ background: "#fff6E0" }}
             >
               <div
@@ -232,7 +258,7 @@ function MissionSection() {
               </div>
               <h3 className="font-bold text-[#101726] text-sm mb-2">{p.title}</h3>
               <p className="text-xs text-[#101726]/60 leading-relaxed">{p.desc}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -244,8 +270,14 @@ type FilterType = "all" | "active";
 
 function EventCard({ event }: { event: Event }) {
   return (
-    <div className="bg-white rounded-2xl border border-[#e8e0cc] p-5 flex flex-col gap-3.5 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200">
-      <div className="flex items-start justify-between gap-2">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-30px" }}
+      transition={{ duration: 0.4 }}
+      whileHover={{ y: -4, boxShadow: "0 12px 40px rgba(0,0,0,0.1)" }}
+      className="bg-white rounded-2xl border border-[#e8e0cc] p-5 flex flex-col gap-3.5 transition-colors duration-200"
+    >      <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap gap-1.5">
           {event.tags.map((tag) => (
             <span
@@ -292,12 +324,12 @@ function EventCard({ event }: { event: Event }) {
 
       <Link
         href={`/events/${event.id}`}
-        className="mt-auto block text-center py-2.5 rounded-xl text-sm font-semibold text-white transition-colors"
+        className="mt-auto block text-center py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 hover:opacity-90 hover:shadow-md min-h-[44px] flex items-center justify-center"
         style={{ background: "#5C3D8F" }}
       >
         View Event →
       </Link>
-    </div>
+    </motion.div>
   );
 }
 
@@ -394,9 +426,10 @@ function EventsSection() {
         </div>
 
         {events.length === 0 ? (
-          <div className="text-center py-20 text-[#101726]/40">
-            <div className="text-5xl mb-3">🍋</div>
-            <p className="font-medium">Loading events…</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[...Array(6)].map((_, i) => (
+              <CardSkeleton key={i} />
+            ))}
           </div>
         ) : filtered.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -442,7 +475,14 @@ function HowItWorksSection() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative">
           <div className="hidden lg:block absolute top-10 left-[12.5%] right-[12.5%] h-px bg-[#e8e0cc] z-0" />
           {steps.map((s, i) => (
-            <div key={s.num} className="relative z-10 flex flex-col items-center text-center">
+            <motion.div
+              key={s.num}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: i * 0.15 }}
+              className="relative z-10 flex flex-col items-center text-center"
+            >
               <div
                 className="w-20 h-20 rounded-full flex items-center justify-center text-3xl mb-4 border-4 border-white shadow-sm"
                 style={{ background: i % 2 === 0 ? "#008A81" : "#ffcc10" }}
@@ -456,7 +496,7 @@ function HowItWorksSection() {
               <p className="text-xs text-[#101726]/55 leading-relaxed max-w-[150px]">
                 {s.desc}
               </p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -518,11 +558,18 @@ function DonateSection() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {cards.map((card) => (
-            <Link
+          {cards.map((card, i) => (
+            <motion.div
               key={card.title}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-30px" }}
+              transition={{ duration: 0.4, delay: i * 0.1 }}
+              whileHover={{ y: -4, boxShadow: "0 12px 40px rgba(0,0,0,0.1)" }}
+            >
+            <Link
               href={card.href}
-              className="group flex flex-col items-start gap-3 p-6 rounded-2xl border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+              className="group flex flex-col items-start gap-3 p-6 rounded-2xl border transition-all duration-200"
               style={
                 card.primary
                   ? { background: "#5C3D8F", borderColor: "#5C3D8F" }
@@ -564,6 +611,7 @@ function DonateSection() {
                 Learn more →
               </span>
             </Link>
+            </motion.div>
           ))}
         </div>
 
@@ -592,7 +640,13 @@ function CTASection() {
           backgroundSize: "20px 20px",
         }}
       />
-      <div className="relative z-10 max-w-3xl mx-auto px-6 text-center">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 max-w-3xl mx-auto px-6 text-center"
+      >
         <h2
           className="text-4xl md:text-5xl font-bold text-white mb-5"
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
@@ -605,19 +659,19 @@ function CTASection() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/auth"
-            className="px-8 py-4 rounded-full font-bold text-[#101726] text-base transition-colors hover:opacity-90"
+            className="px-8 py-4 rounded-full font-bold text-[#101726] text-base transition-all duration-200 hover:opacity-90 hover:-translate-y-0.5 hover:shadow-lg min-h-[44px] inline-flex items-center justify-center"
             style={{ background: "#ffcc10" }}
           >
             Create Your Account
           </Link>
           <Link
             href="/login"
-            className="px-8 py-4 rounded-full font-semibold text-white text-base border-2 border-white/35 hover:border-white/70 hover:bg-white/10 transition-all"
+            className="px-8 py-4 rounded-full font-semibold text-white text-base border-2 border-white/35 hover:border-white/70 hover:bg-white/10 transition-all duration-200 hover:-translate-y-0.5 min-h-[44px] inline-flex items-center justify-center"
           >
             I Already Have an Account
           </Link>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

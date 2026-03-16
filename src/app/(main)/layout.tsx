@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { UserNav } from "@/components/auth/UserNav";
+import { ChatBot } from "@/components/chat/ChatBot";
 
 function Navbar() {
   const { data: session } = useSession();
@@ -161,7 +162,7 @@ function Navbar() {
               key={item.href}
               href={item.href}
               onClick={() => setMobileOpen(false)}
-              className="text-sm font-semibold text-[#101726] py-2.5 px-3 rounded-lg hover:bg-black/8 transition-colors"
+              className="text-sm font-semibold text-[#101726] py-2.5 px-3 rounded-lg hover:bg-black/8 transition-colors min-h-[44px] flex items-center"
             >
               {item.label}
             </Link>
@@ -173,13 +174,13 @@ function Navbar() {
               <>
                 <Link
                   href="/auth"
-                  className="flex-1 text-center text-sm font-bold text-[#101726] py-2 rounded-md border-2 border-[#101726]"
+                  className="flex-1 text-center text-sm font-bold text-[#101726] py-2 rounded-md border-2 border-[#101726] min-h-[44px] flex items-center justify-center"
                 >
                   LOG IN
                 </Link>
                 <Link
                   href="/auth"
-                  className="flex-1 text-center text-sm font-bold text-white py-2 rounded-md"
+                  className="flex-1 text-center text-sm font-bold text-white py-2 rounded-md min-h-[44px] flex items-center justify-center"
                   style={{ background: "#5C3D8F" }}
                 >
                   GET STARTED
@@ -199,6 +200,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       <Navbar />
       {/* pt-[60px] offsets the fixed navbar so content is never hidden behind it */}
       <main className="pt-[60px]">{children}</main>
+      <ChatBot />
     </>
   );
 }
