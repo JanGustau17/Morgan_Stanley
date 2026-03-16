@@ -4,12 +4,47 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { UserNav } from "@/components/auth/UserNav";
+import { createBrowserClient } from "@supabase/ssr";
 
 function Navbar() {
   const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [communityOpen, setCommunityOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
+  const supabase = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+  // ─── Fetch role from public.volunteers table ──────────────────────────────
+  // Runs whenever the session changes (login / logout).
+  // Looks up the current user's email in the volunteers table and checks
+  // if their role === "admin". Hides the Admin nav link for everyone else.
+  useEffect(() => {
+    async function checkAdminRole() {
+      if (!session?.user?.email) {
+        setIsAdmin(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("volunteers")
+        .select("role")
+        .eq("email", session.user.email)
+        .single();
+
+      if (error) {
+        console.error("Role check error:", error.message);
+        setIsAdmin(false);
+        return;
+      }
+
+      setIsAdmin(data?.role === "admin");
+    }
+
+    checkAdminRole();
+  }, [session?.user?.email]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -27,6 +62,7 @@ function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#ffcc10] shadow-sm">
       <div className="max-w-7xl mx-auto px-4 h-[60px] flex items-center justify-between gap-3">
 
+        {/* LEFT: hamburger (mobile) + nav links (desktop) */}
         <div className="flex items-center gap-1">
           <button
             className="md:hidden p-2 -ml-1 rounded-lg text-[#101726]"
@@ -45,6 +81,7 @@ function Navbar() {
           <div className="hidden md:flex items-center gap-0.5">
             <Link href="/" className={linkCls}>Home</Link>
 
+            {/* Community dropdown */}
             <div className="relative" ref={dropRef}>
               <button
                 onClick={() => setCommunityOpen((v) => !v)}
@@ -61,7 +98,7 @@ function Navbar() {
               {communityOpen && (
                 <div className="absolute top-full left-0 mt-1.5 w-48 bg-white rounded-xl border border-[#e8e0cc] shadow-xl py-1.5 z-50">
                   {[
-                    { href: "/events", icon: "📅", label: "Events" },
+                    { href: "/#events", icon: "📅", label: "Events" },
                     { href: "/leaderboard", icon: "🏆", label: "Leaderboard" },
                     { href: "/profile", icon: "👤", label: "My Profile" },
                   ].map((item) => (
@@ -80,10 +117,15 @@ function Navbar() {
             </div>
 
             <Link href="/events/new" className={linkCls}>Create Event</Link>
-            <Link href="/admin" className={linkCls}>Admin</Link>
+
+            {/* Admin — only rendered when role === "admin" in Supabase */}
+            {isAdmin && (
+              <Link href="/admin" className={linkCls}>Admin</Link>
+            )}
           </div>
         </div>
 
+        {/* CENTER: orange lemon icon + wordmark */}
         <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5 shrink-0">
           <div
             className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
@@ -106,6 +148,7 @@ function Navbar() {
           />
         </Link>
 
+        {/* RIGHT: auth */}
         <div className="flex items-center gap-2">
           {session?.user ? (
             <UserNav name={session.user.name} image={session.user.image} />
@@ -129,15 +172,17 @@ function Navbar() {
         </div>
       </div>
 
+      {/* Mobile menu */}
       {mobileOpen && (
         <div className="md:hidden bg-[#ffcc10] border-t border-black/10 px-4 py-3 flex flex-col gap-0.5">
           {[
             { href: "/", label: "Home" },
-            { href: "/events", label: "Events" },
+            { href: "/#events", label: "Events" },
             { href: "/events/new", label: "Create Event" },
             { href: "/leaderboard", label: "Leaderboard" },
             { href: "/profile", label: "My Profile" },
-            { href: "/admin", label: "Admin" },
+            // Admin only injected if role === "admin"
+            ...(isAdmin ? [{ href: "/admin", label: "Admin" }] : []),
           ].map((item) => (
             <Link
               key={item.href}

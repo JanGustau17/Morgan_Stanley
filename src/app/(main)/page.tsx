@@ -464,41 +464,30 @@ function HowItWorksSection() {
   );
 }
 
+// ─── CHANGED: trimmed to 2 cards only (Donate + Volunteer → /auth) ────────────
 function DonateSection() {
   const cards = [
     {
       icon: "💛",
       title: "Donate",
-      desc: "$1 can unlock $8 in free groceries.",
+      desc: "$1 can unlock $8 in free groceries. Your tax-deductible gift goes directly to connecting neighbors with free food.",
       href: "/donate",
+      cta: "Donate now →",
       primary: true,
     },
     {
       icon: "🙌",
       title: "Volunteer",
-      desc: "Join an event and help spread the word.",
-      href: "/#events",
-      primary: false,
-    },
-    {
-      icon: "📢",
-      title: "Spread the Word",
-      desc: "You never know who needs the help.",
-      href: "/share",
-      primary: false,
-    },
-    {
-      icon: "📋",
-      title: "List Your Pantry",
-      desc: "Run a food pantry? Add your organization.",
-      href: "/claim",
+      desc: "Sign up, join an event, and help spread the word in your neighborhood. Every action counts.",
+      href: "/auth",  // points to Get Started / sign-up flow
+      cta: "Get started →",
       primary: false,
     },
   ];
 
   return (
     <section className="py-24" style={{ background: "#fff6E0" }}>
-      <div className="max-w-5xl mx-auto px-6">
+      <div className="max-w-4xl mx-auto px-6">
         <div className="text-center mb-14">
           <div className="inline-block bg-[#ffcc10] text-[#101726] text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full mb-4">
             Support the Mission
@@ -517,12 +506,13 @@ function DonateSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* Two cards, centered, larger since there are only two */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto">
           {cards.map((card) => (
             <Link
               key={card.title}
               href={card.href}
-              className="group flex flex-col items-start gap-3 p-6 rounded-2xl border transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+              className="group flex flex-col items-start gap-4 p-8 rounded-2xl border transition-all duration-200 hover:shadow-lg hover:-translate-y-1"
               style={
                 card.primary
                   ? { background: "#5C3D8F", borderColor: "#5C3D8F" }
@@ -530,38 +520,34 @@ function DonateSection() {
               }
             >
               <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl"
                 style={{
-                  background: card.primary
-                    ? "rgba(255,255,255,0.15)"
-                    : "#008A8112",
+                  background: card.primary ? "rgba(255,255,255,0.15)" : "#008A8112",
                 }}
               >
                 {card.icon}
               </div>
-              <div>
+              <div className="flex-1">
                 <h3
-                  className="font-bold text-sm mb-1"
+                  className="font-bold text-base mb-2"
                   style={{ color: card.primary ? "white" : "#101726" }}
                 >
                   {card.title}
                 </h3>
                 <p
-                  className="text-xs leading-relaxed"
+                  className="text-sm leading-relaxed"
                   style={{
-                    color: card.primary
-                      ? "rgba(255,255,255,0.7)"
-                      : "rgba(16,23,38,0.6)",
+                    color: card.primary ? "rgba(255,255,255,0.75)" : "rgba(16,23,38,0.6)",
                   }}
                 >
                   {card.desc}
                 </p>
               </div>
               <span
-                className="text-xs font-semibold mt-auto"
-                style={{ color: card.primary ? "#ffcc10" : "#008A81" }}
+                className="text-sm font-bold mt-auto"
+                style={{ color: card.primary ? "#ffcc10" : "#5C3D8F" }}
               >
-                Learn more →
+                {card.cta}
               </span>
             </Link>
           ))}
@@ -582,7 +568,7 @@ function CTASection() {
   return (
     <section
       className="py-20 relative overflow-hidden"
-      style={{ background: "#008A81" }}
+      style={{ background: "#5C3D8F" }}
     >
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.04]"
@@ -646,7 +632,8 @@ function Footer() {
             </div>
             <div className="flex flex-col gap-2.5">
               {[
-                { href: "/events", label: "Events" },
+                // CHANGED: Events → scrolls to #events on homepage
+                { href: "/#events", label: "Events" },
                 { href: "/leaderboard", label: "Leaderboard" },
                 { href: "/profile", label: "My Profile" },
                 { href: "/events/new", label: "Create Event" },
@@ -669,8 +656,8 @@ function Footer() {
             <div className="flex flex-col gap-2.5">
               {[
                 { href: "/donate", label: "Donate" },
-                { href: "/volunteer", label: "Volunteer" },
-                { href: "/claim", label: "List a Pantry" },
+                // CHANGED: Volunteer → /auth (Get Started flow)
+                { href: "/auth", label: "Volunteer" },
                 { href: "/terms", label: "Terms of Service" },
                 { href: "/privacy", label: "Privacy Policy" },
               ].map((l) => (
