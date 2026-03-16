@@ -25,10 +25,7 @@ function Navbar() {
   }, []);
 
   const linkCls =
-    "text-sm font-semibold text-[#101726] px-3 py-2 rounded-lg hover:bg.black/8 transition-colors".replace(
-      "black/8",
-      "black/8"
-    );
+    "text-sm font-semibold text-[#101726] px-3 py-2 rounded-lg hover:bg-black/8 transition-colors";
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#ffcc10] shadow-sm">
@@ -100,10 +97,7 @@ function Navbar() {
         {/* CENTER: orange lemon icon + wordmark (matches landing page design) */}
         <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2.5 shrink-0">
           <div
-            className="w-9 h-9 rounded-full flex items-center justify.center shrink-0".replace(
-              "justify.center",
-              "justify-center"
-            )
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
             style={{ background: "#E8522A" }}
           >
             <svg viewBox="0 0 100 100" width="22" height="22" fill="none">
