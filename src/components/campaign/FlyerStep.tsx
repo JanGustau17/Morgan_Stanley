@@ -419,7 +419,7 @@ export function FlyerStep({ lat, lng, locationName, lang: _lang, volunteerId, ca
   }
 
   return (
-    <div id="flyer-step-container" className="flex gap-4 items-stretch">
+    <div id="flyer-step-container" className="flex flex-col md:flex-row gap-4 md:items-stretch">
 
       {/* ── Left: flyer preview ── */}
       <div className="flex-1 min-w-0">
@@ -427,15 +427,15 @@ export function FlyerStep({ lat, lng, locationName, lang: _lang, volunteerId, ca
       </div>
 
       {/* ── Right: customize + download, stretches to match flyer height ── */}
-      <div className="w-44 flex flex-col gap-2 shrink-0">
+      <div className="w-full md:w-44 flex flex-col gap-2 md:shrink-0">
 
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold text-gray-700">Customize</span>
           <span className="text-[11px] text-gray-400">{allResources.length} nearby</span>
         </div>
 
-        {/* 4 resource cards — flex-1 so they fill the space above the button */}
-        <div className="flex flex-col gap-1.5 flex-1">
+        {/* 4 resource cards — grid on mobile, flex column on desktop */}
+        <div className="grid grid-cols-2 md:grid-cols-1 gap-1.5 md:flex-1">
           {selected.map((r, i) => (
             <ResourceSlotCard key={i} resource={r} slotIndex={i} alternatives={getAlternatives(i)} onSwap={handleSwap} />
           ))}

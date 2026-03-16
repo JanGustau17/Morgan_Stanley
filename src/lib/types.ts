@@ -121,3 +121,36 @@ export interface LevelInfo {
   minPoints: number;
   maxPoints: number;
 }
+
+// ─── Forum ──────────────────────────────────────────────────────────────────
+
+export interface ForumThread {
+  id: string;
+  author_id: string;
+  title: string;
+  body: string;
+  tag: string;
+  upvotes: number;
+  reply_count: number;
+  created_at: string;
+  author?: MessageSender;
+}
+
+export interface ForumReply {
+  id: string;
+  thread_id: string;
+  author_id: string;
+  body: string;
+  upvotes: number;
+  created_at: string;
+  author?: MessageSender;
+}
+
+export interface ForumVote {
+  id: string;
+  volunteer_id: string;
+  thread_id: string | null;
+  reply_id: string | null;
+  value: number;
+  created_at: string;
+}
