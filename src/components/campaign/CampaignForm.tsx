@@ -1,16 +1,19 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
-import { ImagePlus, X, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { uploadFile } from '@/lib/supabase/upload';
 import { FlyerStep } from '@/components/campaign/FlyerStep';
+import { NeighborhoodAutocomplete } from '@/components/campaign/NeighborhoodAutocomplete';
+import { CoverImageUpload } from '@/components/campaign/CoverImageUpload';
+import type { DraftPayload } from '@/app/api/campaigns/draft/route';
 
 const LocationPicker = dynamic(
   () => import('@/components/map/LocationPicker'),
@@ -105,11 +108,13 @@ function QRPlaceholder({ value, size = 120 }: { value: string; size?: number }) 
 export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [draftCoverUrl, setDraftCoverUrl] = useState<string | null>(null);
   const [coverUploading, setCoverUploading] = useState(false);
-  const coverRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const {
@@ -139,6 +144,47 @@ export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
   const watchedLocationName = watch('location_name');
   const watchedNeighborhood = watch('neighborhood');
 
+  // Load draft on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/campaigns/draft');
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const draft: DraftPayload | null = data.draft ?? null;
+        if (!draft || cancelled) {
+          setDraftLoaded(true);
+          return;
+        }
+        if (draft.step != null) setStep(Math.min(draft.step, STEPS.length - 1));
+        if (draft.name != null) setValue('name', draft.name);
+        if (draft.campaign_date != null) setValue('campaign_date', draft.campaign_date);
+        if (draft.campaign_time != null) setValue('campaign_time', draft.campaign_time);
+        if (draft.neighborhood != null) setValue('neighborhood', draft.neighborhood);
+        if (draft.location_name != null) setValue('location_name', draft.location_name);
+        if (draft.meeting_point != null) setValue('meeting_point', draft.meeting_point);
+        if (draft.location_notes != null) setValue('location_notes', draft.location_notes);
+        if (draft.description != null) setValue('description', draft.description);
+        if (draft.lat != null) setValue('lat', draft.lat);
+        if (draft.lng != null) setValue('lng', draft.lng);
+        if (draft.target_group != null) setValue('target_group', draft.target_group as CampaignFormData['target_group']);
+        if (draft.language != null) setValue('language', draft.language as CampaignFormData['language']);
+        if (draft.volunteers_needed != null) setValue('volunteers_needed', draft.volunteers_needed);
+        if (draft.flyer_goal != null) setValue('flyer_goal', draft.flyer_goal);
+        if (draft.cover_image_url) {
+          setDraftCoverUrl(draft.cover_image_url);
+          setCoverPreview(draft.cover_image_url);
+        }
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setDraftLoaded(true);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [setValue]);
+
   const fieldsPerStep: (keyof CampaignFormData)[][] = [
     ['name', 'campaign_date', 'neighborhood', 'location_name'],
     ['target_group', 'language', 'volunteers_needed'],
@@ -156,23 +202,70 @@ export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
     setStep((s) => Math.max(s - 1, 0));
   }
 
-  function handleCoverSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  function handleCoverSelect(file: File) {
     setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
+    setDraftCoverUrl(null);
   }
 
   function removeCover() {
     setCoverFile(null);
     setCoverPreview(null);
-    if (coverRef.current) coverRef.current.value = '';
+    setDraftCoverUrl(null);
+  }
+
+  async function saveDraft() {
+    setSavingDraft(true);
+    try {
+      const values = getValues();
+      let cover_image_url: string | null = draftCoverUrl ?? null;
+      if (coverFile) {
+        try {
+          cover_image_url = await uploadFile('campaign-images', 'covers', coverFile);
+        } catch {
+          // keep existing draftCoverUrl or null
+        }
+      }
+      const res = await fetch('/api/campaigns/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          step,
+          name: values.name,
+          campaign_date: values.campaign_date,
+          campaign_time: values.campaign_time,
+          neighborhood: values.neighborhood,
+          location_name: values.location_name,
+          meeting_point: values.meeting_point,
+          location_notes: values.location_notes,
+          description: values.description,
+          lat: values.lat,
+          lng: values.lng,
+          target_group: values.target_group,
+          language: values.language,
+          volunteers_needed: values.volunteers_needed,
+          flyer_goal: values.flyer_goal,
+          cover_image_url,
+        }),
+      });
+      if (res.ok) {
+        if (coverFile && cover_image_url) {
+          setDraftCoverUrl(cover_image_url);
+          setCoverFile(null);
+          setCoverPreview(cover_image_url);
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setSavingDraft(false);
+    }
   }
 
   async function onSubmit(data: CampaignFormData) {
     setSubmitting(true);
     try {
-      let cover_image_url: string | null = null;
+      let cover_image_url: string | null = draftCoverUrl ?? null;
       if (coverFile) {
         setCoverUploading(true);
         try {
@@ -193,6 +286,7 @@ export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
         throw new Error(err.error || 'Failed to create campaign');
       }
       const campaign = await res.json();
+      await fetch('/api/campaigns/draft', { method: 'DELETE' });
       router.push(`/events/${campaign.id}`);
     } catch {
       setSubmitting(false);
@@ -209,16 +303,24 @@ export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  if (!draftLoaded) {
+    return (
+      <div className="flex min-h-[200px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" aria-label="Loading" />
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      <div className="flex items-center justify-between">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 sm:space-y-8">
+      <div className="flex items-center justify-between gap-0.5 sm:gap-1">
         {STEPS.map((label, i) => (
-          <div key={label} className="flex items-center flex-1 last:flex-none">
-            <div className="flex flex-col items-center gap-1.5">
+          <div key={label} className="flex items-center flex-1 last:flex-none min-w-0">
+            <div className="flex flex-col items-center gap-1 sm:gap-1.5 w-full">
               <button
                 type="button"
                 onClick={() => i < step && setStep(i)}
-                className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold transition-all ${
+                className={`flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-full text-xs sm:text-sm font-bold transition-all touch-manipulation min-w-[2rem] sm:min-w-[2.25rem] ${
                   i < step
                     ? 'bg-green-600 text-white cursor-pointer hover:bg-green-700'
                     : i === step
@@ -228,13 +330,13 @@ export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
               >
                 {i < step ? '✓' : i + 1}
               </button>
-              <span className={`text-xs font-medium ${i <= step ? 'text-green-700' : 'text-gray-400'}`}>
+              <span className={`text-[10px] sm:text-xs font-medium truncate w-full text-center ${i <= step ? 'text-green-700' : 'text-gray-400'}`}>
                 {label}
               </span>
             </div>
             {i < STEPS.length - 1 && (
               <div
-                className={`h-0.5 flex-1 mx-3 mt-[-1.25rem] rounded ${i < step ? 'bg-green-600' : 'bg-gray-200'} transition-colors`}
+                className={`h-0.5 flex-1 mx-1 sm:mx-3 mt-[-1.25rem] rounded min-w-2 ${i < step ? 'bg-green-600' : 'bg-gray-200'} transition-colors`}
               />
             )}
           </div>
@@ -253,11 +355,12 @@ export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
             <Input label="Date *" type="date" error={errors.campaign_date?.message} {...register('campaign_date')} />
             <Input label="Time" type="time" {...register('campaign_time')} />
           </div>
-          <Input
-            label="Neighborhood *"
+          <NeighborhoodAutocomplete
+            value={watchedNeighborhood ?? ''}
+            onChange={(v) => setValue('neighborhood', v, { shouldValidate: true })}
             placeholder="e.g. East Harlem"
             error={errors.neighborhood?.message}
-            {...register('neighborhood')}
+            label="Neighborhood *"
           />
           <Input
             label="Location Name *"
@@ -273,29 +376,13 @@ export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
               {...register('description')}
             />
           </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Cover Image <span className="text-gray-400">(optional)</span>
-            </label>
-            {coverPreview ? (
-              <div className="relative">
-                <img src={coverPreview} alt="Cover preview" className="h-40 w-full rounded-lg object-cover" />
-                <button
-                  type="button"
-                  onClick={removeCover}
-                  className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <label className="flex h-32 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 transition-colors hover:border-green-400 hover:bg-green-50">
-                <ImagePlus className="h-6 w-6 text-gray-400" />
-                <span className="text-sm text-gray-500">Click to upload a cover image</span>
-                <input ref={coverRef} type="file" accept="image/*" onChange={handleCoverSelect} className="hidden" />
-              </label>
-            )}
-          </div>
+          <CoverImageUpload
+            previewUrl={coverPreview ?? null}
+            onFileSelect={handleCoverSelect}
+            onRemove={removeCover}
+            uploading={coverUploading}
+            disabled={submitting}
+          />
         </div>
       )}
 
@@ -311,7 +398,7 @@ export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
                     key={g.id}
                     type="button"
                     onClick={() => setValue('target_group', g.id)}
-                    className={`flex flex-col items-start rounded-xl border-2 p-4 text-left transition-all ${
+                    className={`flex min-h-[44px] flex-col items-start justify-center rounded-xl border-2 p-3 sm:p-4 text-left transition-all touch-manipulation ${
                       selected ? 'border-green-600 bg-green-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
@@ -330,11 +417,11 @@ export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
               {LANGUAGES.map((lang) => {
                 const selected = watchedLanguage === lang.id;
                 return (
-                  <button
-                    key={lang.id}
-                    type="button"
-                    onClick={() => setValue('language', lang.id)}
-                    className={`rounded-full px-4 py-2 text-sm font-semibold border transition-all ${
+                <button
+                  key={lang.id}
+                  type="button"
+                  onClick={() => setValue('language', lang.id)}
+                  className={`min-h-[44px] touch-manipulation rounded-full px-4 py-2 text-sm font-semibold border transition-all ${
                       selected ? 'bg-green-600 text-white border-green-600' : 'bg-white text-gray-600 border-gray-300 hover:border-green-400'
                     }`}
                   >
@@ -458,26 +545,48 @@ export function CampaignForm({ volunteerId }: { volunteerId?: string }) {
         </div>
       )}
 
-      <div className="flex justify-between pt-2">
-        {step > 0 ? (
-          <Button type="button" variant="outline" onClick={goBack}>← Back</Button>
-        ) : (
-          <div />
-        )}
-        {step < STEPS.length - 1 ? (
-          <Button type="button" onClick={goNext}>Next →</Button>
-        ) : (
-          <Button type="submit" loading={submitting}>
-            {coverUploading ? (
+      <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-between sm:gap-0">
+        <div className="flex gap-2 sm:gap-3">
+          {step > 0 && (
+            <Button type="button" variant="outline" onClick={goBack} className="min-h-[44px] touch-manipulation">
+              ← Back
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={saveDraft}
+            disabled={savingDraft || submitting}
+            className="min-h-[44px] touch-manipulation"
+          >
+            {savingDraft ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Uploading image...
+                Saving…
               </span>
             ) : (
-              '🚀 Create Campaign'
+              'Save draft'
             )}
           </Button>
-        )}
+        </div>
+        <div className="flex justify-end">
+          {step < STEPS.length - 1 ? (
+            <Button type="button" onClick={goNext} className="min-h-[44px] touch-manipulation">
+              Next →
+            </Button>
+          ) : (
+            <Button type="submit" loading={submitting} className="min-h-[44px] touch-manipulation">
+              {coverUploading ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Uploading image...
+                </span>
+              ) : (
+                '🚀 Create Campaign'
+              )}
+            </Button>
+          )}
+        </div>
       </div>
     </form>
   );
