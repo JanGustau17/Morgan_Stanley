@@ -69,6 +69,7 @@ function Navbar() {
                 <div className="absolute top-full left-0 mt-1.5 w-48 bg-white rounded-xl border border-[#e8e0cc] shadow-xl py-1.5 z-50">
                   {[
                     { href: "/#events", icon: "📅", label: "Events" },
+                    { href: "/resources", icon: "🍎", label: "Food Resources" },
                     { href: "/forum", icon: "💬", label: "Forum" },
                     { href: "/leaderboard", icon: "🏆", label: "Leaderboard" },
                     { href: "/profile", icon: "👤", label: "My Profile" },
@@ -88,6 +89,8 @@ function Navbar() {
             </div>
 
             <Link href="/events/new" className={linkCls}>Create Event</Link>
+
+            <Link href="/resources" className={linkCls}>Resources</Link>
 
             <Link href="/forum" className={linkCls}>Forum</Link>
 
@@ -151,6 +154,7 @@ function Navbar() {
           {[
             { href: "/", label: "Home" },
             { href: "/#events", label: "Events" },
+            { href: "/resources", label: "Food Resources" },
             { href: "/events/new", label: "Create Event" },
             { href: "/forum", label: "Forum" },
             { href: "/leaderboard", label: "Leaderboard" },

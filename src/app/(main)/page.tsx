@@ -514,6 +514,13 @@ function DonateSection() {
       primary: true,
     },
     {
+      icon: "🍎",
+      title: "Find Food",
+      desc: "Search nearby pantries and soup kitchens.",
+      href: "/resources",
+      primary: false,
+    },
+    {
       icon: "🙌",
       title: "Volunteer",
       desc: "Join an event and help spread the word.",
@@ -557,7 +564,7 @@ function DonateSection() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
           {cards.map((card, i) => (
             <motion.div
               key={card.title}
@@ -701,6 +708,7 @@ function Footer() {
             <div className="flex flex-col gap-2.5">
               {[
                 { href: "/events", label: "Events" },
+                { href: "/resources", label: "Food Resources" },
                 { href: "/forum", label: "Forum" },
                 { href: "/leaderboard", label: "Leaderboard" },
                 { href: "/profile", label: "My Profile" },

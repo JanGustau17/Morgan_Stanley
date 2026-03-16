@@ -17,6 +17,12 @@ interface Resource {
   longitude?: number;
   distance?: number;
   type?: string;
+  resourceTypeId?: string;
+  phone?: string;
+  website?: string;
+  description?: string;
+  tags?: { id: string; name: string }[];
+  shifts?: { day?: string; startTime?: string; endTime?: string }[];
 }
 
 interface EnhancedMapProps {
@@ -154,8 +160,10 @@ export default function EnhancedMap({
                   setShowPopup(false);
                 }}
               >
-                <div className="w-7 h-7 rounded-full bg-[#008A81] border-2 border-white shadow-md flex items-center justify-center text-xs cursor-pointer hover:scale-110 transition-transform">
-                  🍎
+                <div className={`w-7 h-7 rounded-full border-2 border-white shadow-md flex items-center justify-center text-xs cursor-pointer hover:scale-110 transition-transform ${
+                  r.resourceTypeId === 'SOUP_KITCHEN' ? 'bg-orange-500' : 'bg-[#008A81]'
+                }`}>
+                  {r.resourceTypeId === 'SOUP_KITCHEN' ? '🍲' : '🍎'}
                 </div>
               </Marker>
             );
@@ -195,7 +203,7 @@ export default function EnhancedMap({
               onClose={() => setSelectedResource(null)}
               closeOnClick={false}
             >
-              <div className="px-1 py-0.5 max-w-[200px]">
+              <div className="px-1 py-0.5 max-w-[220px]">
                 <div className="font-bold text-sm text-gray-900">{selectedResource.name}</div>
                 {selectedResource.address && (
                   <div className="text-xs text-gray-500 mt-0.5">{selectedResource.address}</div>
@@ -205,11 +213,36 @@ export default function EnhancedMap({
                     📏 {Number(selectedResource.distance).toFixed(1)} mi away
                   </div>
                 )}
-                {selectedResource.type && (
-                  <div className="inline-block text-xs bg-green-50 text-green-700 px-1.5 py-0.5 rounded-full mt-1">
-                    {selectedResource.type}
+                {selectedResource.resourceTypeId && (
+                  <div className={`inline-block text-xs px-1.5 py-0.5 rounded-full mt-1 ${
+                    selectedResource.resourceTypeId === 'SOUP_KITCHEN'
+                      ? 'bg-orange-50 text-orange-700'
+                      : 'bg-green-50 text-green-700'
+                  }`}>
+                    {selectedResource.resourceTypeId === 'FOOD_PANTRY' ? '🍎 Food Pantry' : selectedResource.resourceTypeId === 'SOUP_KITCHEN' ? '🍲 Soup Kitchen' : selectedResource.resourceTypeId}
                   </div>
                 )}
+                {selectedResource.phone && (
+                  <div className="text-xs text-gray-600 mt-1">📞 {selectedResource.phone}</div>
+                )}
+                {selectedResource.tags && selectedResource.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedResource.tags.slice(0, 3).map((t) => (
+                      <span key={t.id} className="text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full">
+                        {t.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${(selectedResource.lat ?? selectedResource.latitude)},${(selectedResource.lng ?? selectedResource.longitude)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block text-xs font-semibold text-white px-2 py-1 rounded-md mt-1.5"
+                  style={{ background: '#008A81' }}
+                >
+                  Get Directions →
+                </a>
               </div>
             </Popup>
           )}
@@ -273,14 +306,19 @@ export default function EnhancedMap({
 
         {/* Legend */}
         {(showResources || campaigns.length > 0) && (
-          <div className="flex items-center gap-3 text-xs text-gray-500">
+          <div className="flex items-center gap-3 text-xs text-gray-500 flex-wrap">
             <span className="flex items-center gap-1">
               <span className="w-3 h-3 rounded-full bg-[#5C3D8F]" /> Event
             </span>
             {showResources && (
-              <span className="flex items-center gap-1">
-                <span className="w-3 h-3 rounded-full bg-[#008A81]" /> Food Resource
-              </span>
+              <>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-full bg-[#008A81]" /> Food Pantry
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded-full bg-orange-500" /> Soup Kitchen
+                </span>
+              </>
             )}
             {campaigns.length > 0 && (
               <span className="flex items-center gap-1">
@@ -299,7 +337,7 @@ export default function EnhancedMap({
             <span className="text-xs font-normal text-gray-400">({resources.length} found)</span>
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {resources.slice(0, 6).map((r, i) => (
+            {resources.slice(0, 8).map((r, i) => (
               <button
                 key={r.id || i}
                 onClick={() => {
@@ -309,19 +347,28 @@ export default function EnhancedMap({
                 }}
                 className="flex items-start gap-2.5 p-3 rounded-xl border border-gray-100 bg-white hover:border-[#008A81]/30 hover:shadow-sm transition-all text-left min-h-[44px]"
               >
-                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center shrink-0 text-sm">
-                  🍎
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm ${
+                  r.resourceTypeId === 'SOUP_KITCHEN' ? 'bg-orange-50' : 'bg-green-50'
+                }`}>
+                  {r.resourceTypeId === 'SOUP_KITCHEN' ? '🍲' : '🍎'}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium text-gray-900 truncate">{r.name}</div>
                   {r.address && (
                     <div className="text-xs text-gray-500 truncate mt-0.5">{r.address}</div>
                   )}
-                  {r.distance !== undefined && (
-                    <div className="text-xs text-[#008A81] font-medium mt-0.5">
-                      {Number(r.distance).toFixed(1)} mi
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {r.distance !== undefined && (
+                      <span className="text-xs text-[#008A81] font-medium">
+                        {Number(r.distance).toFixed(1)} mi
+                      </span>
+                    )}
+                    {r.resourceTypeId && (
+                      <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
+                        {r.resourceTypeId === 'FOOD_PANTRY' ? 'Pantry' : r.resourceTypeId === 'SOUP_KITCHEN' ? 'Kitchen' : r.resourceTypeId}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </button>
             ))}
