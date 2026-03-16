@@ -3,11 +3,11 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
+import { StatusBadge } from '@/components/ui/StatusBadge';
 import {
-  Star, Pencil, Check, X, Palette,
-  Upload, ImageIcon, Sparkles, Trash2, AlertTriangle,
+  ShieldCheck, Phone, Pencil, Check, X, Palette,
+  Upload, ImageIcon, Sparkles, AlertTriangle,
 } from 'lucide-react';
-import { useState as useReactState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 const PRESETS = [
@@ -114,11 +114,11 @@ export function ProfileHeader({
   const [deleting, setDeleting] = useState(false);
 
   // Phone verification state
-  const [editablePhone, setEditablePhone] = useReactState(phone ?? '');
-  const [verifStep, setVerifStep] = useReactState<'idle' | 'code' | 'verified'>(phone ? 'verified' : 'idle');
-  const [verifCode, setVerifCode] = useReactState('');
-  const [verifLoading, setVerifLoading] = useReactState(false);
-  const [verifError, setVerifError] = useReactState('');
+  const [editablePhone, setEditablePhone] = useState(phone ?? '');
+  const [verifStep, setVerifStep] = useState<'idle' | 'code' | 'verified'>(phone ? 'verified' : 'idle');
+  const [verifCode, setVerifCode] = useState('');
+  const [verifLoading, setVerifLoading] = useState(false);
+  const [verifError, setVerifError] = useState('');
 
   const levelTitle = LEVEL_TITLES[level] ?? `Level ${level}`;
 
@@ -258,19 +258,21 @@ export function ProfileHeader({
                 {level}
               </div>
             </div>
-            <div className="flex flex-col items-end gap-1">
+            <div className="flex flex-col items-end gap-1.5">
               <div
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold"
                 style={{ background: '#f5f3ff', color: 'var(--third)' }}
               >
-                <Star className="h-3.5 w-3.5" />
+                <span className="text-base">🌱</span>
                 {levelTitle}
               </div>
               {verifStep === 'verified' && (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200">
-                  <img src="/verified-badge.png" alt="" className="h-3.5 w-3.5" />
-                  Trusted organizer
-                </div>
+                <StatusBadge
+                  variant="trusted"
+                  size="sm"
+                  icon={<ShieldCheck className="h-3 w-3" />}
+                  label="Trusted organizer"
+                />
               )}
             </div>
           </div>
@@ -406,26 +408,35 @@ export function ProfileHeader({
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
               <p className="text-[10px] mt-1.5 text-gray-400">JPG, PNG, GIF, WebP — any image from your device</p>
             </div>
-          </div>
 
             <div style={{ borderTop: '1px solid var(--border)' }} />
 
             {/* Phone & SMS verification */}
             <div>
-              <label className="text-xs font-bold uppercase tracking-widest block mb-1" style={{ color: 'var(--primary)' }}>
-                Phone (optional)
-              </label>
-              <p className="text-xs mb-2" style={{ color: 'var(--muted)' }}>
-                Add a phone number to receive SMS updates. Verifying your number gives you a small
-                “trusted organizer” badge that organizers can see.
+              <div className="flex items-center gap-1.5 mb-1">
+                <Phone className="h-3.5 w-3.5" style={{ color: 'var(--primary)' }} />
+                <label className="text-xs font-bold uppercase tracking-widest" style={{ color: 'var(--primary)' }}>
+                  Phone (optional)
+                </label>
+              </div>
+              <p className="text-xs mb-4 leading-relaxed" style={{ color: 'var(--muted)' }}>
+                Add your number to receive SMS updates. Verifying earns you a{' '}
+                <span className="font-semibold" style={{ color: 'var(--primary)' }}>Trusted Organizer</span>{' '}
+                badge visible to others.
               </p>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+
+              {/* Phone input row */}
+              <div className="flex items-center gap-2">
                 <input
                   value={editablePhone}
-                  onChange={(e) => setEditablePhone(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border text-sm outline-none transition-all"
+                  onChange={(e) => {
+                    setEditablePhone(e.target.value);
+                    if (verifStep === 'verified') setVerifStep('idle');
+                  }}
+                  className="flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm outline-none transition-all"
                   style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'var(--background)' }}
                   placeholder="e.g. +1 555 000 0000"
+                  aria-label="Phone number"
                 />
                 <button
                   type="button"
@@ -448,68 +459,104 @@ export function ProfileHeader({
                     }
                   }}
                   disabled={verifLoading}
-                  className="mt-2 sm:mt-0 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
+                  className="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
                   style={{ background: 'var(--primary)' }}
                 >
                   {verifLoading ? 'Sending…' : verifStep === 'verified' ? 'Reverify' : 'Send code'}
                 </button>
               </div>
-              {verifStep === 'code' && (
-                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                  <input
-                    value={verifCode}
-                    onChange={(e) => setVerifCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    className="w-full px-3 py-2 rounded-xl border text-sm outline-none transition-all"
-                    style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'var(--background)' }}
-                    placeholder="6‑digit code"
+
+              {/* Verification status */}
+              <div className="mt-2.5 min-h-[20px]">
+                {verifStep === 'verified' ? (
+                  <StatusBadge
+                    variant="verified"
+                    size="sm"
+                    icon={<ShieldCheck className="h-3 w-3" />}
+                    label="Phone verified"
                   />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setVerifError('');
-                      if (!verifCode.trim()) {
-                        setVerifError('Enter the code we sent you.');
-                        return;
-                      }
-                      try {
-                        setVerifLoading(true);
-                        const supabase = createClient();
-                        const { error } = await supabase.auth.verifyOtp({
-                          phone: editablePhone.trim(),
-                          token: verifCode.trim(),
-                          type: 'sms',
-                        });
-                        if (error) throw error;
-                        await fetch('/api/profile/update', {
-                          method: 'PATCH',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
+                ) : editablePhone.trim() ? (
+                  <StatusBadge variant="warning" size="sm" label="Not yet verified" />
+                ) : null}
+              </div>
+
+              {/* OTP code entry */}
+              {verifStep === 'code' && (
+                <div
+                  className="mt-3 p-3 rounded-xl"
+                  style={{ background: 'var(--primary-pale)', border: '1px solid var(--border)' }}
+                >
+                  <p className="text-xs font-medium mb-2" style={{ color: 'var(--primary)' }}>
+                    Enter the 6-digit code sent to {editablePhone}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      value={verifCode}
+                      onChange={(e) => setVerifCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm font-mono tracking-widest text-center outline-none transition-all"
+                      style={{ borderColor: 'var(--border)', color: 'var(--foreground)', background: 'var(--background)' }}
+                      placeholder="000000"
+                      inputMode="numeric"
+                      maxLength={6}
+                      aria-label="Verification code"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setVerifError('');
+                        if (!verifCode.trim()) {
+                          setVerifError('Enter the code we sent you.');
+                          return;
+                        }
+                        try {
+                          setVerifLoading(true);
+                          const supabase = createClient();
+                          const { error } = await supabase.auth.verifyOtp({
                             phone: editablePhone.trim(),
-                            phone_verified: true,
-                          }),
-                        });
-                        setVerifStep('verified');
-                        setVerifCode('');
-                      } catch (err) {
-                        setVerifError(err instanceof Error ? err.message : 'Invalid or expired code');
-                      } finally {
-                        setVerifLoading(false);
+                            token: verifCode.trim(),
+                            type: 'sms',
+                          });
+                          if (error) throw error;
+                          await fetch('/api/profile/update', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              phone: editablePhone.trim(),
+                              phone_verified: true,
+                            }),
+                          });
+                          setVerifStep('verified');
+                          setVerifCode('');
+                        } catch (err) {
+                          setVerifError(err instanceof Error ? err.message : 'Invalid or expired code');
+                        } finally {
+                          setVerifLoading(false);
+                        }
+                      }}
+                      disabled={verifLoading || verifCode.length < 6}
+                      className="shrink-0 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60 transition-opacity"
+                      style={{ background: '#15803d' }}
+                      aria-disabled={verifLoading || verifCode.length < 6}
+                      aria-label={
+                        verifCode.length < 6
+                          ? 'Enter all 6 digits to verify'
+                          : verifLoading
+                            ? 'Verifying code…'
+                            : 'Verify code'
                       }
-                    }}
-                    disabled={verifLoading}
-                    className="mt-2 sm:mt-0 px-4 py-2 rounded-xl text-sm font-semibold text-white disabled:opacity-60"
-                    style={{ background: 'var(--secondary)' }}
-                  >
-                    {verifLoading ? 'Verifying…' : 'Verify number'}
-                  </button>
+                    >
+                      {verifLoading ? 'Verifying…' : 'Verify'}
+                    </button>
+                  </div>
                 </div>
               )}
+
+              {/* Inline error */}
               {verifError && (
-                <p className="mt-2 text-xs text-red-600">
-                  {verifError}
-                </p>
+                <p className="mt-2 text-xs font-medium text-red-600">{verifError}</p>
               )}
             </div>
+          </div>
 
           {/* Panel footer */}
           <div

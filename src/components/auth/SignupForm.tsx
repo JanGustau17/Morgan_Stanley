@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { createClient } from "@/lib/supabase/client";
+
+type FormStatus = "idle" | "loading" | "success" | "error" | "exists";
 
 export default function SignupForm() {
   const [fullName, setFullName] = useState("");
@@ -9,10 +12,75 @@ export default function SignupForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [sendUpdates, setSendUpdates] = useState(false);
+  const [status, setStatus] = useState<FormStatus>("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  async function handleEmailSignup(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (!fullName.trim() || !email.trim() || !password.trim()) {
+      setStatus("error");
+      setErrorMsg("Please fill in your name, email, and password.");
+      return;
+    }
+    if (password.length < 6) {
+      setStatus("error");
+      setErrorMsg("Password must be at least 6 characters.");
+      return;
+    }
+
+    setStatus("loading");
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: { full_name: fullName.trim(), sms_opt_in: sendUpdates },
+        },
+      });
+
+      if (error) {
+        setStatus("error");
+        setErrorMsg(error.message);
+        return;
+      }
+
+      // Supabase returns identities: [] when the email is already registered
+      if (!data.user?.identities || data.user.identities.length === 0) {
+        setStatus("exists");
+        return;
+      }
+
+      // If email confirmation is required, show success message.
+      // If not required (auto-confirmed), sign in immediately via email-session.
+      if (data.session) {
+        // Email confirmation disabled — sign in right away
+        const sessionRes = await fetch("/api/auth/email-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim(), password }),
+        });
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json().catch(() => null) as { token?: string } | null;
+          if (sessionData?.token) {
+            await signIn("credentials", { token: sessionData.token, callbackUrl: "/" });
+            return;
+          }
+        }
+      }
+
+      setStatus("success");
+    } catch {
+      setStatus("error");
+      setErrorMsg("Something went wrong. Please try again.");
+    }
+  }
 
   return (
-    <form className="space-y-5 font-sans">
-      {/* Full Name - static label */}
+    <form onSubmit={handleEmailSignup} className="space-y-5 font-sans">
+      {/* Full Name */}
       <div>
         <label
           htmlFor="fullName"
@@ -52,7 +120,7 @@ export default function SignupForm() {
         />
       </div>
 
-      {/* Password (for familiarity / browser suggestions; auth still via Google) */}
+      {/* Password */}
       <div>
         <label
           htmlFor="password"
@@ -87,7 +155,7 @@ export default function SignupForm() {
         </div>
       </div>
 
-      {/* Single opt-in checkbox: Send me product updates and news */}
+      {/* Opt-in checkbox */}
       <div className="pt-1">
         <label className="flex cursor-pointer items-start gap-3">
           <input
@@ -108,19 +176,45 @@ export default function SignupForm() {
         </label>
       </div>
 
-      {/* Primary CTA: sign up with Google */}
+      {/* Inline feedback messages */}
+      {status === "success" && (
+        <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
+          ✅ Account created! Check your email to confirm your address, then{" "}
+          <a href="/login" className="font-semibold underline underline-offset-2">
+            sign in
+          </a>
+          .
+        </div>
+      )}
+      {status === "exists" && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          This email is already registered.{" "}
+          <a href="/login" className="font-semibold underline underline-offset-2">
+            Sign in
+          </a>{" "}
+          or{" "}
+          <a
+            href="/auth/forgot-password"
+            className="font-semibold underline underline-offset-2"
+          >
+            reset your password
+          </a>
+          .
+        </div>
+      )}
+      {status === "error" && errorMsg && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMsg}
+        </div>
+      )}
+
+      {/* Primary CTA: email/password sign up */}
       <button
-        type="button"
-        onClick={() =>
-          signIn("google", {
-            callbackUrl: "/",
-            // Let Google use the email as a login hint when possible.
-            login_hint: email || undefined,
-          })
-        }
-        className="btn-cta-shimmer w-full rounded-full bg-brand-yellow py-3 font-bold text-brand-green transition-colors hover:bg-brand-yellowHover focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:ring-offset-2 focus:ring-offset-brand-cream"
+        type="submit"
+        disabled={status === "loading" || status === "success"}
+        className="btn-cta-shimmer w-full rounded-full bg-brand-yellow py-3 font-bold text-brand-green transition-colors hover:bg-brand-yellowHover focus:outline-none focus:ring-2 focus:ring-brand-yellow focus:ring-offset-2 focus:ring-offset-brand-cream disabled:opacity-60"
       >
-        Sign up with Google
+        {status === "loading" ? "Creating account…" : "Create account"}
       </button>
 
       {/* Divider */}
@@ -133,7 +227,7 @@ export default function SignupForm() {
         </div>
       </div>
 
-      {/* Sign in with Google */}
+      {/* Google OAuth button */}
       <button
         type="button"
         onClick={() =>
@@ -143,7 +237,7 @@ export default function SignupForm() {
           })
         }
         className="flex w-full items-center justify-center gap-2 rounded-full border border-brand-border bg-white py-3 text-sm font-medium text-brand-text transition-all duration-300 hover:bg-brand-cream hover:border-brand-green/40 hover:shadow-[0_0_12px_rgba(45,106,79,0.12)] focus:outline-none focus:ring-2 focus:ring-brand-yellow/30"
-        aria-label="Sign in with Google"
+        aria-label="Sign up with Google"
       >
         <GoogleIcon className="h-5 w-5" />
         Sign up with Google

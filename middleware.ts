@@ -7,6 +7,10 @@ const { auth } = NextAuth(authConfig);
 const protectedPaths = ["/profile", "/events", "/admin"];
 const authPaths = ["/auth", "/login"];
 
+// These auth sub-paths must remain accessible even when the user is logged in
+// (e.g. the password-reset page arrives via an email link that carries tokens).
+const authBypassPaths = ["/auth/reset-password"];
+
 function isProtectedPath(pathname: string): boolean {
   return protectedPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
@@ -15,12 +19,16 @@ function isAuthPath(pathname: string): boolean {
   return authPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
+function isAuthBypassPath(pathname: string): boolean {
+  return authBypassPaths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 export default auth((req) => {
   const { nextUrl } = req;
   const pathname = nextUrl.pathname;
   const isLoggedIn = !!req.auth;
 
-  if (isAuthPath(pathname) && isLoggedIn) {
+  if (isAuthPath(pathname) && isLoggedIn && !isAuthBypassPath(pathname)) {
     return Response.redirect(new URL("/", nextUrl));
   }
 
